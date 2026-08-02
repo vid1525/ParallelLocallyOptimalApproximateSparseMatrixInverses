@@ -1,0 +1,52 @@
+[
+  {
+    "name": "bmw7st_1",
+    "group": "GHS_psdef",
+    "rows": 141347,
+    "cols": 141347,
+    "nnz": 7318399,
+    "source_page": "https://sparse.tamu.edu/GHS_psdef/bmw7st_1",
+    "source_url": "https://suitesparse-collection-website.herokuapp.com/MM/GHS_psdef/bmw7st_1.tar.gz",
+    "filename": "bmw7st_1-GHS_psdef.mtx"
+  },
+  {
+    "name": "hood",
+    "group": "GHS_psdef",
+    "rows": 220542,
+    "cols": 220542,
+    "nnz": 9895422,
+    "source_page": "https://sparse.tamu.edu/GHS_psdef/hood",
+    "source_url": "https://suitesparse-collection-website.herokuapp.com/MM/GHS_psdef/hood.tar.gz",
+    "filename": "hood-GHS_psdef.mtx"
+  },
+  {
+    "name": "inline_1",
+    "group": "GHS_psdef",
+    "rows": 503712,
+    "cols": 503712,
+    "nnz": 36816170,
+    "source_page": "https://sparse.tamu.edu/GHS_psdef/inline_1",
+    "source_url": "https://suitesparse-collection-website.herokuapp.com/MM/GHS_psdef/inline_1.tar.gz",
+    "filename": "inline_1-GHS_psdef.mtx"
+  },
+  {
+    "name": "audikw_1",
+    "group": "GHS_psdef",
+    "rows": 943695,
+    "cols": 943695,
+    "nnz": 77651847,
+    "source_page": "https://sparse.tamu.edu/GHS_psdef/audikw_1",
+    "source_url": "https://suitesparse-collection-website.herokuapp.com/MM/GHS_psdef/audikw_1.tar.gz",
+    "filename": "audikw_1-GHS_psdef.mtx"
+  },
+  {
+    "name": "ldoor",
+    "group": "GHS_psdef",
+    "rows": 952203,
+    "cols": 952203,
+    "nnz": 42493817,
+    "source_page": "https://sparse.tamu.edu/GHS_psdef/ldoor",
+    "source_url": "https://suitesparse-collection-website.herokuapp.com/MM/GHS_psdef/ldoor.tar.gz",
+    "filename": "ldoor-GHS_psdef.mtx"
+  }
+]
