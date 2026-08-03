@@ -26,7 +26,7 @@ void LinearCombination(const SparseMatrix& x, const double a, SparseMatrix& y, c
 }
 
 void MulScalarColumnwise(SparseMatrix& x, const std::vector<double>& a) {
-  if (a.size() != x.cols()) {
+  if (static_cast<int64_t>(a.size()) != x.cols()) {
     throw std::invalid_argument("Column coefficients do not match the sparse matrix x.cols != a.cols");
   }
 

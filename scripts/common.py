@@ -127,10 +127,20 @@ def _run_single_method(
 
     label = methods.get_method_label(family, method_name)
     result_folder = methods.get_preconditioner_result_folder(family, method_name)
-    graph = result.history['residual_norm']
+    graph_iterations, graph = _pad_convergence_history(
+        result.history,
+        args.max_iterations,
+    )
 
     _save_preconditioner_matrix(matrix_data.dataset_dir, result_folder, result.M)
-    plt.semilogy(np.arange(graph.size), graph, linewidth=2, label=label)
+    plt.semilogy(
+        graph_iterations,
+        graph,
+        linewidth=2,
+        marker='o',
+        markersize=3,
+        label=label,
+    )
     final_iteration = result.history[-1]
     return _ConvergenceTableRow(
         method=label,
@@ -272,6 +282,21 @@ def _get_datastring_in_filename(args: argparse.Namespace) -> str:
 
 
 # private functions
+def _pad_convergence_history(history: np.ndarray, max_iterations: int) -> tuple[np.ndarray, np.ndarray]:
+    iterations = history['iteration']
+    residual_norms = history['residual_norm']
+    last_iteration = int(iterations[-1])
+    if last_iteration >= max_iterations:
+        return iterations, residual_norms
+
+    padded_iterations = np.arange(last_iteration + 1, max_iterations + 1, dtype=iterations.dtype)
+    padded_residuals = np.full(padded_iterations.size, residual_norms[-1], dtype=residual_norms.dtype)
+    return (
+        np.concatenate((iterations, padded_iterations)),
+        np.concatenate((residual_norms, padded_residuals)),
+    )
+
+
 def _plot_convergence_chart(ds_name: str, chart_name: str, dataset_dir: Path, args: argparse.Namespace) -> Path:
     plt.xlabel('Iteration, $i$', fontsize=DEFAULT_FONT_SIZE)
     plt.ylabel(r'Residual norm, $||R_i||_F$', labelpad=5, fontsize=DEFAULT_FONT_SIZE)

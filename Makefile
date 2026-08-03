@@ -49,7 +49,7 @@ METHODS_SOURCES = \
 
 .PHONY: all check-openmp check-cpp test-cpp python clean
 
-all: check-cpp python
+all: check-cpp python test-cpp
 
 check-openmp:
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -dM -E -x c++ /dev/null | grep -q '^#define _OPENMP '

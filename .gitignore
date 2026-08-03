@@ -19,3 +19,4 @@ img/methods/
 *.orig
 *.rej
 *.log
+preconditioner.mtx

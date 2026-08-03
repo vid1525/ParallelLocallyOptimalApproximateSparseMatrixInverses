@@ -160,6 +160,8 @@ def main() -> None:
     if args.tries <= 0:
         raise ValueError('--tries / -N must be positive')
 
+    common.update_output_folder(args)
+
     for dataset in common.select_sample_datasets(args):
         run_speedup_analysis(dataset, args)
 
