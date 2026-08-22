@@ -26,6 +26,24 @@ make python
 make test-cpp
 ```
 
+## Docker
+
+Build the self-contained experiment image (including the C++ toolchain, Eigen,
+OpenMP, Python dependencies, and compiled extension):
+```
+docker compose build
+```
+Run all configured scenarios:
+```
+docker compose run --rm experiments
+```
+The downloaded large datasets and results are kept in Docker named volumes, so
+they persist across runs. To run one script instead, append its command, for
+example:
+```
+docker compose run --rm experiments python scripts/methods_thread_speedup.py --datasets tri100eigs4k --tries 20
+```
+
 Project structure:
  - `main.py` is a script that launches all experimental scenarios to be presented in the Thesis (reads `config.json` file). **Building the project via make operation is required before launching experimental scenarios**. This script simplifies full testing of the project (single launch of `python3 main.py` instead of several launches of different scripts). **For running script for large matrix convergence test, launch the __scripts/fetch_large_spd_matrices.py__ to upload these datasets**.
  - `config.json` contains description of experimental scenarios

@@ -1,0 +1,15 @@
+services:
+  experiments:
+    build: .
+    image: matrix-methods:latest
+    volumes:
+      - large_datasets:/app/scripts/datasets
+      - sample_results:/app/scripts/results_sample
+      - large_results:/app/scripts/results_large
+      - speedup_results:/app/scripts/results_parallelization_speedup
+
+volumes:
+  large_datasets:
+  sample_results:
+  large_results:
+  speedup_results:
