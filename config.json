@@ -50,6 +50,36 @@
             ]
         },
         {
+            "name": "Fetch large SPD matrices",
+            "description": "Downloads the large SPD datasets required for the large convergence test",
+            "script_type": "fetch_large_spd_matrices",
+            "cases": [
+                {
+                    "name": "Download large datasets"
+                }
+            ]
+        },
+        {
+            "name": "Large-matrix convergence test",
+            "description": "Compares convergence with and without dropping on large SPD datasets",
+            "script_type": "methods_large_convergence",
+            "num_threads": "max",
+            "cases": [
+                {
+                    "name": "100 iterations with dropping",
+                    "num_iterations": 100,
+                    "dropping": true,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "100 iterations without dropping",
+                    "num_iterations": 100,
+                    "dropping": false,
+                    "max_density": 0.03
+                }
+            ]
+        },
+        {
             "name": "Parallelization Test",
             "description": "Changes number of threads and checks convergence behavior",
             "script_type": "methods_thread_speedup",
@@ -85,6 +115,6 @@
                     "num_tries": 20
                 }
             ]
-        },
+        }
     ]
 }

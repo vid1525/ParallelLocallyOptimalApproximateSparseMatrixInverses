@@ -1,0 +1,11 @@
+.git
+.venv
+__pycache__
+**/__pycache__
+build
+*.o
+*.so
+*.pyd
+scripts/results*
+scripts/datasets/*.mtx
+.DS_Store

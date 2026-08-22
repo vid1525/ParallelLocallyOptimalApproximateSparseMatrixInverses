@@ -21,6 +21,17 @@ CASE_OPTIONS = {
     "num_threads": "--num-threads",
 }
 
+# The experiment scripts normally write below ``/app/scripts``.  That is
+# appropriate for a writable source checkout, but an Apptainer SIF image is
+# read-only.  Keep all files produced by a full run in one caller-provided
+# directory when requested.
+RESULTS_SUBDIRECTORIES = {
+    "methods_convergence": "results_sample",
+    "methods_large_convergence": "results_large",
+    "methods_thread_speedup": "results_parallelization_speedup",
+}
+LARGE_DATASETS_SUBDIRECTORY = "datasets"
+
 
 def load_scenarios(config_path: Path = CONFIG_PATH) -> list[dict[str, Any]]:
     with config_path.open(encoding="utf-8") as config_file:
@@ -32,7 +43,11 @@ def load_scenarios(config_path: Path = CONFIG_PATH) -> list[dict[str, Any]]:
     return scenarios
 
 
-def build_command(script_type: str, case: dict[str, Any]) -> list[str]:
+def build_command(
+    script_type: str,
+    case: dict[str, Any],
+    results_dir: Path | None = None,
+) -> list[str]:
     if not script_type or Path(script_type).name != script_type:
         raise ValueError(f"Invalid script_type: {script_type!r}")
 
@@ -60,10 +75,36 @@ def build_command(script_type: str, case: dict[str, Any]) -> list[str]:
     if not dropping:
         command.append("--disable-dropping")
 
+    if results_dir is not None:
+        if script_type == "fetch_large_spd_matrices":
+            command.extend(("--output-dir", str(results_dir / LARGE_DATASETS_SUBDIRECTORY)))
+        else:
+            output_subdirectory = RESULTS_SUBDIRECTORIES.get(script_type)
+            if output_subdirectory is not None:
+                command.extend(("--output-dir", str(results_dir / output_subdirectory)))
+            if script_type == "methods_large_convergence":
+                command.extend(("--datasets-dir", str(results_dir / LARGE_DATASETS_SUBDIRECTORY)))
+
     return command
 
 
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Run the experiment scenarios declared in config.json."
+    )
+    parser.add_argument(
+        "--results-dir",
+        type=Path,
+        help="Writable root directory for experiment outputs and downloaded large datasets.",
+    )
+    args = parser.parse_args()
+
+    results_dir = args.results_dir.resolve() if args.results_dir is not None else None
+    if results_dir is not None:
+        results_dir.mkdir(parents=True, exist_ok=True)
+
     scenarios = load_scenarios()
 
     for scenario in scenarios:
@@ -84,7 +125,7 @@ def main() -> None:
             case_options = dict(case)
             if "num_threads" in scenario:
                 case_options.setdefault("num_threads", scenario["num_threads"])
-            command = build_command(script_type, case_options)
+            command = build_command(script_type, case_options, results_dir=results_dir)
             print(f"Running: {scenario_name} / {case_name}", flush=True)
             print(f"Command: {shlex.join(command)}", flush=True)
             subprocess.run(command, check=True)

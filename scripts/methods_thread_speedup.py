@@ -1,5 +1,6 @@
 import argparse
 import collections
+import csv
 import time
 import typing
 from pathlib import Path
@@ -13,16 +14,19 @@ import scripts.utils.methods as methods
 import scripts.utils.typst as typst
 
 
-THREAD_COUNTS = (1, 2, 4, 8, 16, 32)
+THREAD_COUNTS = (1, 2, 4, 8, 16, 32, 64, 128, 256)
 
 _FIELD_METHOD = 'method'
+_TIMING_CSV_COLUMNS = ('method', 'num_threads', 'repetition', 'runtime_seconds')
 
 
 def _get_average_running_time(
     method: typing.Callable,
+    method_label: str,
     matrix_data: common.MatrixData,
     num_threads: int,
     args: argparse.Namespace,
+    timing_rows: list[dict[str, object]],
 ) -> float:
     timing_sum = 0.0
 
@@ -36,10 +40,16 @@ def _get_average_running_time(
             tolerance=args.tolerance,
             max_density=args.max_density,
             enable_dropping=args.enable_dropping,
-            num_threads=args.num_threads,
+            num_threads=num_threads,
         )
         elapsed = time.perf_counter() - start
         timing_sum += elapsed
+        timing_rows.append({
+            'method': method_label,
+            'num_threads': num_threads,
+            'repetition': try_idx + 1,
+            'runtime_seconds': elapsed,
+        })
         print(f'p = {num_threads}, repetition = {try_idx + 1} / {args.tries}: {elapsed:.6g}s')
 
     return timing_sum / args.tries
@@ -65,14 +75,21 @@ def _run_method_for_threads(
     method_name: str,
     method: typing.Callable,
     args: argparse.Namespace,
+    timing_rows: list[dict[str, object]],
 ) -> _SpeedupTableRow:
     label = methods.get_method_label(family, method_name)
     avg_timings = []
 
     for num_threads in THREAD_COUNTS:
-        args.num_threads = num_threads
         print(f'running {label} with p = {num_threads}')
-        avg_timings.append(_get_average_running_time(method, matrix_data, num_threads, args))
+        avg_timings.append(_get_average_running_time(
+            method,
+            label,
+            matrix_data,
+            num_threads,
+            args,
+            timing_rows,
+        ))
 
     averages_by_method[label] = avg_timings
     return _build_speedup_table_row(avg_timings, label)
@@ -110,11 +127,23 @@ def _plot_charts(matrix_data: common.MatrixData, chart_name: str, figure_width: 
     print(f'saved {chart_path}')
 
 
+def _write_timing_csv(dataset_dir: Path, chart_name: str, timing_rows: list[dict[str, object]]) -> Path:
+    dataset_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = dataset_dir / f'{chart_name}_thread_speedup_timings.csv'
+    with csv_path.open('w', newline='', encoding='utf-8') as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=_TIMING_CSV_COLUMNS)
+        writer.writeheader()
+        writer.writerows(timing_rows)
+    print(f'saved {csv_path}')
+    return csv_path
+
+
 def run_speedup_analysis(matrix_data: common.MatrixData, args: argparse.Namespace) -> None:
     matrix_data.load_data()
     speedup_table = typst.TypstTable(_get_speedup_table_row_columns())
     families = methods.get_method_families(args.method_family)
     averages_by_method = {}
+    timing_rows = []
 
     for family in families:
         for method_name, method in methods.generate_methods_by_family(family):
@@ -126,6 +155,7 @@ def run_speedup_analysis(matrix_data: common.MatrixData, args: argparse.Namespac
                     method_name=method_name,
                     method=method,
                     args=args,
+                    timing_rows=timing_rows,
                 )
             )
 
@@ -137,6 +167,7 @@ def run_speedup_analysis(matrix_data: common.MatrixData, args: argparse.Namespac
         figure_height=args.figure_height,
         averages_by_method=averages_by_method,
     )
+    _write_timing_csv(matrix_data.dataset_dir, chart_name, timing_rows)
     speedup_table.dump(matrix_data.dataset_dir / f'{chart_name}_speedup_summary.typ')
 
 

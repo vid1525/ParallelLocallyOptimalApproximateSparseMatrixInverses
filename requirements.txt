@@ -1,0 +1,7 @@
+# Runtime dependencies for experiment scripts and the Cython extension build.
+Cython
+matplotlib
+numpy
+scipy
+setuptools
+tqdm
