@@ -56,7 +56,7 @@ def build_command(
         raise FileNotFoundError(f"Scenario script does not exist: {script_path}")
 
     command = [sys.executable, str(script_path)]
-    supported_fields = {"name", "dropping", *CASE_OPTIONS}
+    supported_fields = {"name", "enabled", "dropping", *CASE_OPTIONS}
     unsupported_fields = set(case).difference(supported_fields)
     if unsupported_fields:
         fields = ", ".join(sorted(unsupported_fields))
@@ -123,6 +123,14 @@ def main() -> None:
 
             case_name = case.get("name", "Unnamed case")
             case_options = dict(case)
+            enabled = case_options.pop("enabled", True)
+            if not isinstance(enabled, bool):
+                raise ValueError(
+                    f'Case "{case_name}" in scenario "{scenario_name}" has a non-boolean enabled value'
+                )
+            if not enabled:
+                print(f"Skipping: {scenario_name} / {case_name} (disabled)", flush=True)
+                continue
             if "num_threads" in scenario:
                 case_options.setdefault("num_threads", scenario["num_threads"])
             command = build_command(script_type, case_options, results_dir=results_dir)
