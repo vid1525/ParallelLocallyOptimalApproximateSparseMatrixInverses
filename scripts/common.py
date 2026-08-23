@@ -186,7 +186,7 @@ def _run_single_method(
     backward_error_history = _get_pcg_backward_error_history(
         matrix_data.A,
         result.M,
-        args.max_iterations,
+        result.iterations,
     )
     backward_error_axis.semilogy(
         backward_error_history,

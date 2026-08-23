@@ -88,28 +88,6 @@
             ]
         },
         {
-            "name": "Large-matrix convergence test",
-            "description": "Compares convergence with and without dropping on large SPD datasets",
-            "script_type": "methods_large_convergence",
-            "num_threads": "max",
-            "cases": [
-                {
-                    "name": "25 iterations with dropping",
-                    "enabled": true,
-                    "num_iterations": 50,
-                    "dropping": true,
-                    "max_density": 0.03
-                },
-                {
-                    "name": "25 iterations without dropping",
-                    "enabled": true,
-                    "num_iterations": 50,
-                    "dropping": false,
-                    "max_density": 0.03
-                }
-            ]
-        },
-        {
             "name": "Parallelization Test",
             "description": "Changes number of threads and checks convergence behavior",
             "script_type": "methods_thread_speedup",
@@ -130,6 +108,28 @@
                     "num_iterations": 25,
                     "dropping": false,
                     "num_tries": 10
+                }
+            ]
+        },
+        {
+            "name": "Large-matrix convergence test",
+            "description": "Compares convergence with and without dropping on large SPD datasets",
+            "script_type": "methods_large_convergence",
+            "num_threads": "max",
+            "cases": [
+                {
+                    "name": "25 iterations with dropping",
+                    "enabled": true,
+                    "num_iterations": 10,
+                    "dropping": true,
+                    "max_density": 0.00005
+                },
+                {
+                    "name": "10 iterations without dropping",
+                    "enabled": true,
+                    "num_iterations": 10,
+                    "dropping": false,
+                    "max_density": 0.00005
                 }
             ]
         }

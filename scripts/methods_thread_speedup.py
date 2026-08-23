@@ -14,7 +14,7 @@ import scripts.utils.methods as methods
 import scripts.utils.typst as typst
 
 
-THREAD_COUNTS = (1, 2, 4, 8, 16, 32, 64, 128, 256)
+THREAD_COUNTS = (1, 2, 4, 8, 16, 32, 64, 128)
 
 _FIELD_METHOD = 'method'
 _TIMING_CSV_COLUMNS = ('method', 'num_threads', 'repetition', 'runtime_seconds')
