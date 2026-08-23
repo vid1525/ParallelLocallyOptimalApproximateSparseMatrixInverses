@@ -17,6 +17,7 @@ def main() -> None:
     parser.add_argument('--max-iterations', type=int, default=20)
     parser.add_argument('--tolerance', type=float, default=1e-9)
     parser.add_argument('--max-density', type=float, default=1e-5)
+    parser.add_argument('--write-preconditioners', action='store_true')
     dropping = parser.add_mutually_exclusive_group()
     dropping.add_argument('--disable-dropping', dest='enable_dropping', action='store_false', default=True)
     parser.add_argument('--num-threads', type=int, default=16)

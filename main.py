@@ -47,6 +47,7 @@ def build_command(
     script_type: str,
     case: dict[str, Any],
     results_dir: Path | None = None,
+    write_preconditioners: bool = False,
 ) -> list[str]:
     if not script_type or Path(script_type).name != script_type:
         raise ValueError(f"Invalid script_type: {script_type!r}")
@@ -85,6 +86,9 @@ def build_command(
             if script_type == "methods_large_convergence":
                 command.extend(("--datasets-dir", str(results_dir / LARGE_DATASETS_SUBDIRECTORY)))
 
+    if write_preconditioners and script_type in {"methods_convergence", "methods_large_convergence"}:
+        command.append("--write-preconditioners")
+
     return command
 
 
@@ -98,6 +102,11 @@ def main() -> None:
         "--results-dir",
         type=Path,
         help="Writable root directory for experiment outputs and downloaded large datasets.",
+    )
+    parser.add_argument(
+        "--write-preconditioners",
+        action="store_true",
+        help="Write generated preconditioner .mtx files (disabled by default).",
     )
     args = parser.parse_args()
 
@@ -133,7 +142,12 @@ def main() -> None:
                 continue
             if "num_threads" in scenario:
                 case_options.setdefault("num_threads", scenario["num_threads"])
-            command = build_command(script_type, case_options, results_dir=results_dir)
+            command = build_command(
+                script_type,
+                case_options,
+                results_dir=results_dir,
+                write_preconditioners=args.write_preconditioners,
+            )
             print(f"Running: {scenario_name} / {case_name}", flush=True)
             print(f"Command: {shlex.join(command)}", flush=True)
             subprocess.run(command, check=True)
