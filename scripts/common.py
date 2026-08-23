@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import csv
 import json
 import numpy as np
 from scipy import sparse
@@ -10,6 +11,8 @@ from scipy.io import mmread, mmwrite
 import sys
 import typing
 from pathlib import Path
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
@@ -67,10 +70,17 @@ SAMPLE_DATASETS = [
 
 # public functions
 def run_methods(matrix_data: MatrixData, args: argparse.Namespace) -> None:
-    plt.figure(figsize=(args.figure_width, args.figure_height))
+    residual_figure, residual_axis = plt.subplots(
+        figsize=(args.figure_width, args.figure_height)
+    )
+    backward_error_figure, backward_error_axis = plt.subplots(
+        figsize=(args.figure_width, args.figure_height)
+    )
     families = methods.get_method_families(args.method_family)
     matrix_data.load_data()
     convergence_table = typst.TypstTable(_get_convergence_table_row_columns())
+    residual_histories = []
+    backward_error_histories = []
 
     for family in families:
         for method_name, method in methods.generate_methods_by_family(family):
@@ -81,21 +91,49 @@ def run_methods(matrix_data: MatrixData, args: argparse.Namespace) -> None:
                     method_name=method_name,
                     method=method,
                     args=args,
+                    residual_axis=residual_axis,
+                    backward_error_axis=backward_error_axis,
+                    residual_histories=residual_histories,
+                    backward_error_histories=backward_error_histories,
                 )
             )
 
     chart_name = args.method_family
-    _plot_convergence_chart(
+    _plot_chart(
         ds_name=matrix_data.name,
         chart_name=chart_name,
         dataset_dir=matrix_data.dataset_dir,
         args=args,
+        figure=residual_figure,
+        axis=residual_axis,
+        y_label=r'Residual norm, $||R_i||_F$',
+        filename_suffix='convergence',
+    )
+    _plot_chart(
+        ds_name=matrix_data.name,
+        chart_name=chart_name,
+        dataset_dir=matrix_data.dataset_dir,
+        args=args,
+        figure=backward_error_figure,
+        axis=backward_error_axis,
+        y_label=r'Backward error, $||r_i||_2 / ||b||_2$',
+        filename_suffix='backward_error',
+    )
+    _dump_iteration_tables(
+        matrix_data.dataset_dir,
+        chart_name,
+        args,
+        'convergence',
+        residual_histories,
+    )
+    _dump_iteration_tables(
+        matrix_data.dataset_dir,
+        chart_name,
+        args,
+        'backward_error',
+        backward_error_histories,
     )
     convergence_table.dump(matrix_data.dataset_dir / f'{chart_name}_summary.typ')
-    # print(
-    #     f'{matrix_data.name}: lambda_max = {matrix_data.lambda_max:.12g}, '
-    #     f'lambda_min = {matrix_data.lambda_min:.12g}, kappa = {matrix_data.kappa:.12g}'
-    # )
 
 
 def update_output_folder(args: argparse.Namespace):
@@ -113,6 +151,10 @@ def _run_single_method(
     method_name: str,
     method: typing.Callable,
     args: argparse.Namespace,
+    residual_axis: plt.Axes,
+    backward_error_axis: plt.Axes,
+    residual_histories: list[tuple[str, np.ndarray]],
+    backward_error_histories: list[tuple[str, np.ndarray]],
 ) -> _ConvergenceTableRow:
     result = method(
         matrix_data.A,
@@ -127,29 +169,41 @@ def _run_single_method(
 
     label = methods.get_method_label(family, method_name)
     result_folder = methods.get_preconditioner_result_folder(family, method_name)
-    graph_iterations, graph = _pad_convergence_history(
-        result.history,
+    style = methods.get_plot_style(family, method_name)
+    iterations = result.history['iteration']
+    if int(iterations[-1]) != result.iterations:
+        raise RuntimeError('Method iteration count does not match its history')
+
+    if args.write_preconditioners:
+        _save_preconditioner_matrix(matrix_data.dataset_dir, result_folder, result.M)
+    residual_axis.semilogy(
+        iterations,
+        result.history['residual_norm'],
+        linewidth=2,
+        label=label,
+        **style,
+    )
+    backward_error_history = _get_pcg_backward_error_history(
+        matrix_data.A,
+        result.M,
         args.max_iterations,
     )
-
-    _save_preconditioner_matrix(matrix_data.dataset_dir, result_folder, result.M)
-    plt.semilogy(
-        graph_iterations,
-        graph,
+    backward_error_axis.semilogy(
+        backward_error_history,
         linewidth=2,
-        marker='o',
-        markersize=3,
         label=label,
+        **style,
     )
-    final_iteration = result.history[-1]
+    residual_histories.append((label, result.history['residual_norm']))
+    backward_error_histories.append((label, backward_error_history))
     return _ConvergenceTableRow(
         method=label,
         n=matrix_data.n,
         nnz=matrix_data.nnz,
         # lambda_min=matrix_data.lambda_min,
         # lambda_max=matrix_data.lambda_max,
-        last_iteration=int(final_iteration['iteration']),
-        residual_norm=final_iteration['residual_norm'],
+        last_iteration=int(iterations[-1]),
+        residual_norm=result.history[-1]['residual_norm'],
         density=result.M.nnz / (matrix_data.n ** 2),
     )
 
@@ -233,8 +287,6 @@ class MatrixData:
         self.A = MatrixData._load_sample_matrix(self.input_dataset_dir, self.filename)
         self.n = self.A.shape[0]
         self.nnz = self.A.nnz
-        self.density = self.nnz / (self.n ** 2)
-        # self.lambda_max, self.lambda_min, self.kappa = MatrixData._get_max_min_eigenvalues(self.A)
         self.Pr = MatrixData._get_diagonal_inverse_preconditioner(self.A)
         self.M0 = sparse.eye(self.A.shape[0], format='csc', dtype=np.float64)
 
@@ -256,16 +308,6 @@ class MatrixData:
         return A
 
     @staticmethod
-    def _get_max_min_eigenvalues(A: sparse.spmatrix) -> tuple[float, float, float]:
-        def _get_eigenvalue(A: sparse.spmatrix, which: str, maxiter) -> float:
-            return float(sparse_linalg.eigsh(A, k=1, return_eigenvectors=False, which=which, maxiter=maxiter)[0])
-
-        maxiter = max(10 * A.shape[0], 1000)
-        lambda_max = _get_eigenvalue(A, which='LA', maxiter=maxiter)
-        lambda_min = _get_eigenvalue(A, which='SA', maxiter=maxiter)
-        return lambda_max, lambda_min, (lambda_max / lambda_min if np.abs(lambda_min) > EPS else np.nan)
-
-    @staticmethod
     def _get_diagonal_inverse_preconditioner(A: sparse.spmatrix) -> sparse.csc_matrix:
         diag = A.diagonal()
         if np.any(abs(diag) < EPS):
@@ -273,44 +315,99 @@ class MatrixData:
         return sparse.diags(1.0 / diag, format='csc')
 
 
-def _get_datastring_in_title(args: argparse.Namespace) -> str:
-    return f'{"dropping" if args.enable_dropping else "no dropping"}, max_iter - {args.max_iterations}, max_density - {args.max_density:.3f}'
-
-
 def _get_datastring_in_filename(args: argparse.Namespace) -> str:
     return f'{"dropping" if args.enable_dropping else "no_dropping"}-max_iter_{args.max_iterations}-max_density_{args.max_density:.3f}'
 
 
 # private functions
-def _pad_convergence_history(history: np.ndarray, max_iterations: int) -> tuple[np.ndarray, np.ndarray]:
-    iterations = history['iteration']
-    residual_norms = history['residual_norm']
-    last_iteration = int(iterations[-1])
-    if last_iteration >= max_iterations:
-        return iterations, residual_norms
+def _get_pcg_backward_error_history(
+    A: sparse.csc_matrix, M: sparse.csc_matrix, max_iterations: int
+) -> np.ndarray:
+    """Record PCG's relative residual for a known solution x = 1."""
+    x_exact = np.ones(A.shape[0])
+    b = A @ x_exact
+    b_norm = np.linalg.norm(b)
+    history = [1.0]
 
-    padded_iterations = np.arange(last_iteration + 1, max_iterations + 1, dtype=iterations.dtype)
-    padded_residuals = np.full(padded_iterations.size, residual_norms[-1], dtype=residual_norms.dtype)
-    return (
-        np.concatenate((iterations, padded_iterations)),
-        np.concatenate((residual_norms, padded_residuals)),
+    def record_backward_error(x: np.ndarray) -> None:
+        residual_norm = np.linalg.norm(b - A @ x)
+        history.append(residual_norm / b_norm if b_norm > 0.0 else np.nan)
+
+    preconditioner = sparse_linalg.LinearOperator(A.shape, matvec=M.dot, dtype=np.float64)
+    sparse_linalg.cg(
+        A,
+        b,
+        M=preconditioner,
+        rtol=1e-6,
+        atol=0.0,
+        maxiter=max_iterations,
+        callback=record_backward_error,
     )
+    return np.asarray(history)
 
 
-def _plot_convergence_chart(ds_name: str, chart_name: str, dataset_dir: Path, args: argparse.Namespace) -> Path:
-    plt.xlabel('Iteration, $i$', fontsize=DEFAULT_FONT_SIZE)
-    plt.ylabel(r'Residual norm, $||R_i||_F$', labelpad=5, fontsize=DEFAULT_FONT_SIZE)
-    plt.title(f'{ds_name}', fontsize=DEFAULT_FONT_SIZE)  # : {_get_datastring_in_title(args)}
-    plt.grid(True, alpha=0.6)
-    plt.legend(fontsize=DEFAULT_FONT_SIZE)
-    plt.tick_params(axis='both', which='major', labelsize=DEFAULT_FONT_SIZE)
+def _plot_chart(
+    ds_name: str,
+    chart_name: str,
+    dataset_dir: Path,
+    args: argparse.Namespace,
+    figure: plt.Figure,
+    axis: plt.Axes,
+    y_label: str,
+    filename_suffix: str,
+) -> Path:
+    axis.set_xlabel('Iteration, $i$', fontsize=DEFAULT_FONT_SIZE)
+    axis.set_ylabel(y_label, labelpad=5, fontsize=DEFAULT_FONT_SIZE)
+    axis.set_title(ds_name, fontsize=DEFAULT_FONT_SIZE)
+    axis.grid(True, alpha=0.6)
+    axis.legend(fontsize=DEFAULT_FONT_SIZE)
+    axis.tick_params(axis='both', which='major', labelsize=DEFAULT_FONT_SIZE)
     
     dataset_dir.mkdir(parents=True, exist_ok=True)
-    chart_filename = dataset_dir / f'{chart_name}-{_get_datastring_in_filename(args)}-convergence.png'
-    plt.tight_layout()
-    plt.savefig(chart_filename, dpi=DEFAULT_FIGURE_DPI)
-    plt.close()
+    chart_filename = dataset_dir / f'{chart_name}-{_get_datastring_in_filename(args)}-{filename_suffix}.png'
+    figure.tight_layout()
+    figure.savefig(chart_filename, dpi=DEFAULT_FIGURE_DPI)
+    plt.close(figure)
     print(f'saved {chart_filename}')
+
+
+def _dump_iteration_tables(
+    dataset_dir: Path,
+    chart_name: str,
+    args: argparse.Namespace,
+    filename_suffix: str,
+    histories: list[tuple[str, np.ndarray]],
+) -> None:
+    """Write one row per actual iteration, leaving ended series blank."""
+    if not histories:
+        return
+    max_iterations = max(history.size for _, history in histories)
+    filename = f'{chart_name}-{_get_datastring_in_filename(args)}-{filename_suffix}'
+    headers = ['Iteration', *(label for label, _ in histories)]
+    rows = []
+    for iteration in range(max_iterations):
+        rows.append([
+            iteration,
+            *(history[iteration] if iteration < history.size else '' for _, history in histories),
+        ])
+
+    csv_path = dataset_dir / f'{filename}.csv'
+    with csv_path.open('w', newline='', encoding='utf-8') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(headers)
+        writer.writerows(rows)
+    print(f'saved {csv_path}')
+
+    columns = [('iteration', 'Iteration')] + [
+        (f'method_{index}', label) for index, (label, _) in enumerate(histories)
+    ]
+    row_type = collections.namedtuple('IterationRow', [key for key, _ in columns])
+    table = typst.TypstTable(columns)
+    for row in rows:
+        table.add_row(row_type(*row))
+    typst_path = dataset_dir / f'{filename}.typ'
+    table.dump(typst_path)
+    print(f'saved {typst_path}')
 
 
 def _load_matrix_data_from_config(path: Path) -> list[MatrixData]:

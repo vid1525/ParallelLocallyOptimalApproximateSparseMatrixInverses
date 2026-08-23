@@ -94,14 +94,14 @@
             "num_threads": "max",
             "cases": [
                 {
-                    "name": "50 iterations with dropping",
+                    "name": "25 iterations with dropping",
                     "enabled": true,
                     "num_iterations": 50,
                     "dropping": true,
                     "max_density": 0.03
                 },
                 {
-                    "name": "50 iterations without dropping",
+                    "name": "25 iterations without dropping",
                     "enabled": true,
                     "num_iterations": 50,
                     "dropping": false,
@@ -121,7 +121,7 @@
                     "num_iterations": 25,
                     "dropping": true,
                     "max_density": 0.03,
-                    "num_tries": 20
+                    "num_tries": 10
                 },
                 {
                     "name": "tri100eigs4k no dropping (uniform distribution over columns)",
@@ -129,24 +129,7 @@
                     "dataset": "tri100eigs4k",
                     "num_iterations": 25,
                     "dropping": false,
-                    "num_tries": 20
-                },
-                {
-                    "name": "Poisson32k with dropping (uniform distribution over columns)",
-                    "enabled": true,
-                    "dataset": "Poisson32k",
-                    "num_iterations": 25,
-                    "dropping": true,
-                    "max_density": 0.03,
-                    "num_tries": 20
-                },
-                {
-                    "name": "Poisson32k no dropping (uniform distribution over columns)",
-                    "enabled": true,
-                    "dataset": "Poisson32k",
-                    "num_iterations": 25,
-                    "dropping": false,
-                    "num_tries": 20
+                    "num_tries": 10
                 }
             ]
         }
