@@ -4,7 +4,6 @@ The purpose of this work is to implement parallelized methods for the preconditi
  - Global SPAI Conjugate Gradient (CG)
  - Global SPAI Minimal Residual (MR)
  - Global SPAI Locally Minimal Residual (LOMR)
- - Inner-Outer MINRES
  - Inner-Outer MR
  - Inner-Outer LOMR
 

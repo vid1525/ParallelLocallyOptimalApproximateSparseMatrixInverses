@@ -11,7 +11,7 @@ FIELD_AVAILABLE_METHODS = 'available_methods'
 
 METHOD_FAMILIES = {
     METHOD_FAMILY_GLOBAL_SPAI: {
-        FIELD_TITLE: 'Global SPAI',
+        FIELD_TITLE: 'Global',
         FIELD_OUTPUT_SLUG: 'global_spai',
         FIELD_CYTHON_METHODS_HOLDER: global_spai,
     },
@@ -31,7 +31,6 @@ def get_plot_style(family: dict[str, object], method_name: str) -> dict[str, str
     """Use the paper's family colors and distinguish methods by line style."""
     line_styles = {
         'cg': '-',
-        'minres': '-',
         'mr': '--',
         'lomr': ':',
     }

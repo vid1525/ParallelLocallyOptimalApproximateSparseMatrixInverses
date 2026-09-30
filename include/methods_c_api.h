@@ -54,8 +54,6 @@ Result inner_outer_mr(MatrixData A, MatrixData M0, MatrixData Pr, MethodParams p
 
 Result inner_outer_lomr(MatrixData A, MatrixData M0, MatrixData Pr, MethodParams params);
 
-Result inner_outer_minres(MatrixData A, MatrixData M0, MatrixData Pr, MethodParams params);
-
 void free_mem(Result* result);
 
 }

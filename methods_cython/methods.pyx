@@ -51,8 +51,6 @@ cdef extern from "methods_c_api.h":
 
     Result inner_outer_lomr(MatrixData A, MatrixData M0, MatrixData Pr, MethodParams params) noexcept nogil
 
-    Result inner_outer_minres(MatrixData A, MatrixData M0, MatrixData Pr, MethodParams params) noexcept nogil
-
     void free_mem(Result* result)
 
 
@@ -222,20 +220,7 @@ class GlobalSpaiMethods:
 
 
 class InnerOuterMethods:
-    available_methods = ("minres", "mr", "lomr")
-
-    def minres(self, A, M0=None, Pr=None, max_iterations=100, tolerance=1e-9, max_density=0.03, enable_dropping=True, num_threads=1):
-        return _call_method(
-            inner_outer_minres,
-            A,
-            M0,
-            Pr,
-            max_iterations,
-            tolerance,
-            max_density,
-            enable_dropping,
-            num_threads,
-        )
+    available_methods = ("mr", "lomr")
 
     def mr(self, A, M0=None, Pr=None, max_iterations=100, tolerance=1e-9, max_density=0.03, enable_dropping=True, num_threads=1):
         return _call_method(
