@@ -116,7 +116,6 @@ int main() {
   CommonParallelizationTest("global_cg", params, mgs::RunConjugateGradient, initial_residual);
   CommonParallelizationTest("global_mr", params, mgs::RunMinimalResidual, initial_residual);
   CommonParallelizationTest("global_lomr", params, mgs::RunLocallyOptimalMinimalResidual, initial_residual);
-  CommonParallelizationTest("inner_outer_minres", params, mio::RunMinres, initial_residual);
   CommonParallelizationTest("inner_outer_mr", params, mio::RunMinimalResidual, initial_residual);
   CommonParallelizationTest("inner_outer_lomr", params, mio::RunLocallyOptimalMinimalResidual, initial_residual);
   std::cout << "-------------------------------" << std::endl;
@@ -141,7 +140,6 @@ int main() {
   DroppingParallelizationTest("global_cg_drop", sparse_params, mgs::RunConjugateGradient);
   DroppingParallelizationTest("global_mr_drop", sparse_params, mgs::RunMinimalResidual);
   DroppingParallelizationTest("global_lomr_drop", sparse_params, mgs::RunLocallyOptimalMinimalResidual);
-  DroppingParallelizationTest("inner_outer_minres_drop", sparse_params, mio::RunMinres);
   DroppingParallelizationTest("inner_outer_mr_drop", sparse_params, mio::RunMinimalResidual);
   DroppingParallelizationTest("inner_outer_lomr_drop", sparse_params, mio::RunLocallyOptimalMinimalResidual);
   std::cout << "-------------------------------" << std::endl;
@@ -156,7 +154,6 @@ int main() {
   CheckDensityStop("global_cg_no_drop", mgs::RunConjugateGradient(no_drop_params, 1), no_drop_params.max_density);
   CheckDensityStop("global_mr_no_drop", mgs::RunMinimalResidual(no_drop_params, 1), no_drop_params.max_density);
   CheckDensityStop("global_lomr_no_drop", mgs::RunLocallyOptimalMinimalResidual(no_drop_params, 1), no_drop_params.max_density);
-  CheckDensityStop("inner_outer_minres_no_drop", mio::RunMinres(no_drop_params, 1), no_drop_params.max_density);
   CheckDensityStop("inner_outer_mr_no_drop", mio::RunMinimalResidual(no_drop_params, 1), no_drop_params.max_density);
   CheckDensityStop("inner_outer_lomr_no_drop", mio::RunLocallyOptimalMinimalResidual(no_drop_params, 1), no_drop_params.max_density);
   std::cout << "-------------------------------" << std::endl;

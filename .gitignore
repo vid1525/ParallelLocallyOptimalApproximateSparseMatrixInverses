@@ -7,7 +7,7 @@ __pycache__/
 methods_cython/global_spai.cpp
 methods_cython/methods.cpp
 img/global-spai/
-img/spai/
+img/
 img/methods/
 .vscode/
 .DS_Store

@@ -45,7 +45,7 @@ METHODS_SOURCES = \
 	src/global_spai/conjugate_gradient.cpp \
 	src/global_spai/minimal_residual.cpp \
 	src/global_spai/locally_minimal_residual.cpp \
-	src/inner_outer/minres.cpp
+	src/inner_outer/minimal_residual.cpp
 
 .PHONY: all check-openmp check-cpp test-cpp python clean
 
@@ -57,7 +57,7 @@ check-openmp:
 
 check-cpp: check-openmp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(METHODS_SOURCES)
-	rm -f methods_common.o state_manager.o sparse_operations.o dropping.o result_operations.o methods_c_api.o conjugate_gradient.o minimal_residual.o locally_minimal_residual.o minres.o
+	rm -f methods_common.o state_manager.o sparse_operations.o dropping.o result_operations.o methods_c_api.o conjugate_gradient.o minimal_residual.o locally_minimal_residual.o
 
 test-cpp: check-openmp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) tests/test.cpp $(METHODS_SOURCES) $(LDFLAGS) $(LDLIBS) -o /tmp/test
@@ -69,4 +69,4 @@ python:
 clean:
 	rm -rf build
 	rm -f methods_cython/global_spai.cpp methods_cython/methods.cpp methods_cython/*.so methods_cython/*.pyd
-	rm -f methods_common.o state_manager.o sparse_operations.o dropping.o result_operations.o methods_c_api.o conjugate_gradient.o minimal_residual.o locally_minimal_residual.o minres.o
+	rm -f methods_common.o state_manager.o sparse_operations.o dropping.o result_operations.o methods_c_api.o conjugate_gradient.o minimal_residual.o locally_minimal_residual.o

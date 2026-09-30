@@ -149,10 +149,6 @@ Result inner_outer_lomr(MatrixData A, MatrixData M0, MatrixData Pr, MethodParams
   return RunMethod(A, M0, Pr, params, mio::RunLocallyOptimalMinimalResidual);
 }
 
-Result inner_outer_minres(MatrixData A, MatrixData M0, MatrixData Pr, MethodParams params) {
-  return RunMethod(A, M0, Pr, params, mio::RunMinres);
-}
-
 void free_mem(Result* result) {
   if (result == nullptr) {
     return;

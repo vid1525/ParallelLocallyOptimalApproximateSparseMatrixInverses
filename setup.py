@@ -74,7 +74,7 @@ extensions = [
             "src/global_spai/conjugate_gradient.cpp",
             "src/global_spai/minimal_residual.cpp",
             "src/global_spai/locally_minimal_residual.cpp",
-            "src/inner_outer/minres.cpp",
+            "src/inner_outer/minimal_residual.cpp",
         ],
         include_dirs=[
             "include",
