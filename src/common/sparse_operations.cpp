@@ -7,8 +7,8 @@
 
 namespace methods::common {
 
-bool IsFiniteNonZero(const double value) {
-  return std::isfinite(value) && std::fabs(value) > kPruneValueThreshold;
+bool IsFiniteNonZero(const double value, const double threshold) {
+  return std::isfinite(value) && std::fabs(value) > threshold;
 }
 
 double GetSafeQuotient(const double numerator, const double denominator) {
@@ -19,10 +19,10 @@ double GetSafeQuotient(const double numerator, const double denominator) {
   return std::isfinite(quotient) ? quotient : 0.0;
 }
 
-void LinearCombination(const SparseMatrix& x, const double a, SparseMatrix& y, const double b) {
+void LinearCombination(const SparseMatrix& x, const double a, SparseMatrix& y, const double b, const bool prune) {
   y *= b;
   y += a * x;
-  y.prune(1.0, kPruneValueThreshold);
+  y.prune(1.0, prune ? kPruneValueThreshold : 0.0);
 }
 
 void MulScalarColumnwise(SparseMatrix& x, const std::vector<double>& a) {
@@ -38,14 +38,14 @@ void MulScalarColumnwise(SparseMatrix& x, const std::vector<double>& a) {
   x.prune(1.0, kPruneValueThreshold);
 }
 
-void AddScaled(SparseMatrix& target, const SparseMatrix& direction, const double coefficient) {
+void AddScaled(SparseMatrix& target, const SparseMatrix& direction, const double coefficient, const bool prune) {
   if (target.rows() != direction.rows() || target.cols() != direction.cols()) {
     throw std::invalid_argument("Sparse matrices must have the same shape");
   }
-  if (std::fabs(coefficient) > kPruneValueThreshold) {
+  if (prune ? std::fabs(coefficient) > kPruneValueThreshold : coefficient != 0.0) {
     target += coefficient * direction;
   }
-  target.prune(1.0, kPruneValueThreshold);
+  target.prune(1.0, prune ? kPruneValueThreshold : 0.0);
 }
 
 double FrobeniusDot(const SparseMatrix& x, const SparseMatrix& y) {

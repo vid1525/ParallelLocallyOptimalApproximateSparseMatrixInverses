@@ -1,30 +1,24 @@
 {
     "scenarios": [
         {
-            "name": "Convergence Test with dropping",
-            "description": "Convergence Test with dropping",
+            "name": "Section 5.1: Sample-matrix convergence with dropping",
+            "description": "The ten benchmark matrices and iteration limits used in Section 5.1 of the thesis.",
             "script_type": "methods_convergence",
             "num_threads": "max",
             "cases": [
-                {
-                    "name": "100 iterations",
-                    "enabled": true,
-                    "num_iterations": 100,
-                    "dropping": true,
-                    "max_density": 0.03
-                },
-                {
-                    "name": "500 iterations",
-                    "enabled": true,
-                    "num_iterations": 500,
-                    "dropping": true,
-                    "max_density": 0.03
-                },
                 {
                     "name": "bcsstk21, 1000 iterations",
                     "enabled": true,
                     "dataset": "bcsstk21",
                     "num_iterations": 1000,
+                    "dropping": true,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "tri100eigs4k, 500 iterations",
+                    "enabled": true,
+                    "dataset": "tri100eigs4k",
+                    "num_iterations": 500,
                     "dropping": true,
                     "max_density": 0.03
                 },
@@ -35,34 +29,84 @@
                     "num_iterations": 5000,
                     "dropping": true,
                     "max_density": 0.03
+                },
+                {
+                    "name": "bundle1, 500 iterations",
+                    "enabled": true,
+                    "dataset": "bundle1",
+                    "num_iterations": 500,
+                    "dropping": true,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "4bw100eigs20k, 500 iterations",
+                    "enabled": true,
+                    "dataset": "4bw100eigs20k",
+                    "num_iterations": 500,
+                    "dropping": true,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "4bw100eigs20k2, 100 iterations",
+                    "enabled": true,
+                    "dataset": "4bw100eigs20k2",
+                    "num_iterations": 100,
+                    "dropping": true,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "rand20k, 500 iterations",
+                    "enabled": true,
+                    "dataset": "rand20k",
+                    "num_iterations": 500,
+                    "dropping": true,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "rand20k2, 500 iterations",
+                    "enabled": true,
+                    "dataset": "rand20k2",
+                    "num_iterations": 500,
+                    "dropping": true,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "wathen100, 100 iterations",
+                    "enabled": true,
+                    "dataset": "wathen100",
+                    "num_iterations": 100,
+                    "dropping": true,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "Poisson32k, 100 iterations",
+                    "enabled": true,
+                    "dataset": "Poisson32k",
+                    "num_iterations": 100,
+                    "dropping": true,
+                    "max_density": 0.03
                 }
             ]
         },
         {
-            "name": "Convergence Test no dropping",
-            "description": "Convergence Test no dropping",
+            "name": "Section 5.1: Sample-matrix convergence without dropping",
+            "description": "The ten benchmark matrices and iteration limits used in Section 5.1 of the thesis.",
             "script_type": "methods_convergence",
             "num_threads": "max",
             "cases": [
-                {
-                    "name": "100 iterations",
-                    "enabled": true,
-                    "num_iterations": 100,
-                    "dropping": false,
-                    "max_density": 0.03
-                },
-                {
-                    "name": "500 iterations",
-                    "enabled": true,
-                    "num_iterations": 500,
-                    "dropping": false,
-                    "max_density": 0.03
-                },
                 {
                     "name": "bcsstk21, 1000 iterations",
                     "enabled": true,
                     "dataset": "bcsstk21",
                     "num_iterations": 1000,
+                    "dropping": false,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "tri100eigs4k, 500 iterations",
+                    "enabled": true,
+                    "dataset": "tri100eigs4k",
+                    "num_iterations": 500,
                     "dropping": false,
                     "max_density": 0.03
                 },
@@ -73,27 +117,160 @@
                     "num_iterations": 5000,
                     "dropping": false,
                     "max_density": 0.03
+                },
+                {
+                    "name": "bundle1, 500 iterations",
+                    "enabled": true,
+                    "dataset": "bundle1",
+                    "num_iterations": 500,
+                    "dropping": false,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "4bw100eigs20k, 500 iterations",
+                    "enabled": true,
+                    "dataset": "4bw100eigs20k",
+                    "num_iterations": 500,
+                    "dropping": false,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "4bw100eigs20k2, 100 iterations",
+                    "enabled": true,
+                    "dataset": "4bw100eigs20k2",
+                    "num_iterations": 100,
+                    "dropping": false,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "rand20k, 100 iterations",
+                    "enabled": true,
+                    "dataset": "rand20k",
+                    "num_iterations": 100,
+                    "dropping": false,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "rand20k2, 500 iterations",
+                    "enabled": true,
+                    "dataset": "rand20k2",
+                    "num_iterations": 500,
+                    "dropping": false,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "wathen100, 100 iterations",
+                    "enabled": true,
+                    "dataset": "wathen100",
+                    "num_iterations": 100,
+                    "dropping": false,
+                    "max_density": 0.03
+                },
+                {
+                    "name": "Poisson32k, 100 iterations",
+                    "enabled": true,
+                    "dataset": "Poisson32k",
+                    "num_iterations": 100,
+                    "dropping": false,
+                    "max_density": 0.03
                 }
             ]
         },
         {
-            "name": "Fetch large SPD matrices",
-            "description": "Downloads the large SPD datasets required for the large convergence test",
-            "script_type": "fetch_large_spd_matrices",
+            "name": "Section 5.2: Large-matrix convergence",
+            "description": "The five large structural matrices, with and without dropping, at 10 iterations and density 0.00005.",
+            "script_type": "methods_large_convergence",
+            "num_threads": "max",
             "cases": [
                 {
-                    "name": "Download large datasets",
-                    "enabled": true
+                    "name": "bmw7st_1, 10 iterations with dropping",
+                    "enabled": true,
+                    "dataset": "bmw7st_1",
+                    "num_iterations": 10,
+                    "dropping": true,
+                    "max_density": 5e-05
+                },
+                {
+                    "name": "bmw7st_1, 10 iterations without dropping",
+                    "enabled": true,
+                    "dataset": "bmw7st_1",
+                    "num_iterations": 10,
+                    "dropping": false,
+                    "max_density": 5e-05
+                },
+                {
+                    "name": "hood, 10 iterations with dropping",
+                    "enabled": true,
+                    "dataset": "hood",
+                    "num_iterations": 10,
+                    "dropping": true,
+                    "max_density": 5e-05
+                },
+                {
+                    "name": "hood, 10 iterations without dropping",
+                    "enabled": true,
+                    "dataset": "hood",
+                    "num_iterations": 10,
+                    "dropping": false,
+                    "max_density": 5e-05
+                },
+                {
+                    "name": "inline_1, 10 iterations with dropping",
+                    "enabled": true,
+                    "dataset": "inline_1",
+                    "num_iterations": 10,
+                    "dropping": true,
+                    "max_density": 5e-05
+                },
+                {
+                    "name": "inline_1, 10 iterations without dropping",
+                    "enabled": true,
+                    "dataset": "inline_1",
+                    "num_iterations": 10,
+                    "dropping": false,
+                    "max_density": 5e-05
+                },
+                {
+                    "name": "audikw_1, 10 iterations with dropping",
+                    "enabled": true,
+                    "dataset": "audikw_1",
+                    "num_iterations": 10,
+                    "dropping": true,
+                    "max_density": 5e-05
+                },
+                {
+                    "name": "audikw_1, 10 iterations without dropping",
+                    "enabled": true,
+                    "dataset": "audikw_1",
+                    "num_iterations": 10,
+                    "dropping": false,
+                    "max_density": 5e-05
+                },
+                {
+                    "name": "ldoor, 10 iterations with dropping",
+                    "enabled": true,
+                    "dataset": "ldoor",
+                    "num_iterations": 10,
+                    "dropping": true,
+                    "max_density": 5e-05
+                },
+                {
+                    "name": "ldoor, 10 iterations without dropping",
+                    "enabled": true,
+                    "dataset": "ldoor",
+                    "num_iterations": 10,
+                    "dropping": false,
+                    "max_density": 5e-05
                 }
             ]
         },
         {
-            "name": "Parallelization Test",
-            "description": "Changes number of threads and checks convergence behavior",
+            "name": "Section 5.3: Parallelization and speedup",
+            "description": "tri100eigs4k at 25 iterations, density 0.03, and 10 repetitions for each of 1, 2, 4, 8, 16, 32, 64, and 128 threads.",
             "script_type": "methods_thread_speedup",
             "cases": [
                 {
-                    "name": "tri100eigs4k with dropping (uniform distribution over columns)",
+                    "name": "tri100eigs4k with dropping",
                     "enabled": true,
                     "dataset": "tri100eigs4k",
                     "num_iterations": 25,
@@ -102,34 +279,13 @@
                     "num_tries": 10
                 },
                 {
-                    "name": "tri100eigs4k no dropping (uniform distribution over columns)",
+                    "name": "tri100eigs4k without dropping",
                     "enabled": true,
                     "dataset": "tri100eigs4k",
                     "num_iterations": 25,
                     "dropping": false,
+                    "max_density": 0.03,
                     "num_tries": 10
-                }
-            ]
-        },
-        {
-            "name": "Large-matrix convergence test",
-            "description": "Compares convergence with and without dropping on large SPD datasets",
-            "script_type": "methods_large_convergence",
-            "num_threads": "max",
-            "cases": [
-                {
-                    "name": "25 iterations with dropping",
-                    "enabled": true,
-                    "num_iterations": 10,
-                    "dropping": true,
-                    "max_density": 0.00005
-                },
-                {
-                    "name": "10 iterations without dropping",
-                    "enabled": true,
-                    "num_iterations": 10,
-                    "dropping": false,
-                    "max_density": 0.00005
                 }
             ]
         }

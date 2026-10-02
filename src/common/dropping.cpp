@@ -95,24 +95,26 @@ DropCandidate GetDropCutoff(std::vector<DropCandidate>& candidates, const int64_
 }  // namespace
 
 void CurrentStateManager::CalculateResidualForBatch(ColumnBatch& batch) {
-  batch.r = (-1.0 * input_params.A * batch.m).pruned(1.0, kPruneValueThreshold);
+  batch.r = -1.0 * input_params.A * batch.m;
   for (int64_t i = 0; i < batch.Width(); ++i) {
     batch.r.coeffRef(batch.first_column + i, i) += 1.0;  // add identity correction
   }
+  // recompute I - A*M without dropping residual entries
+  batch.r.prune(0.0);
 }
 
 void CurrentStateManager::EnsureSymmetry() {
   if (!preserve_symmetry) {
     return;
   }
-  // M := (M + M^T) / 2.
+  // M := (M + M^T) / 2
   SparseMatrix M_approx = AssembleM();
   SparseMatrix M_T_approx = M_approx.transpose();
   RunBatchesParallel(batches.size(), thread_count, [&](const int64_t index) {
     ColumnBatch& batch = batches[index];
     batch.m = (
       0.5 * (M_approx.middleCols(batch.first_column, batch.Width()) + M_T_approx.middleCols(batch.first_column, batch.Width()))
-    ).pruned(1.0, kPruneValueThreshold);
+    );
     batch.m.makeCompressed();
   });
 }
@@ -120,10 +122,15 @@ void CurrentStateManager::EnsureSymmetry() {
 void CurrentStateManager::ApplyDroppingStrategy() {
   EnsureSymmetry();
   RunBatchesParallel(batches.size(), thread_count, [&](const int64_t index) {
-    CalculateResidualForBatch(batches[index]);
+    auto& batch = batches[index];
+    // protects diagonal entries from both dropping stages
+    batch.m.prune([&](const int64_t row, const int64_t col, const double value) {
+      return value != 0.0 && (row == batch.first_column + col || std::abs(value) >= kPruneValueThreshold);
+    });
+    CalculateResidualForBatch(batch);
   });
 
-  // drop if Nnz(M) <= max.
+  // no density truncation if Nnz(M) <= max
   const auto max_nonzeros = GetMaxNonZeros();
   const auto nonzeros = CountNonZeros(MatrixType::M);
   if (nonzeros <= max_nonzeros) {
@@ -167,10 +174,14 @@ bool CurrentStateManager::DropForMatrixType(const MatrixType matrix_type) {
   if (!input_params.enable_dropping) {
     return false;
   }
+  const auto original_nonzeros = CountNonZeros(matrix_type);
+  RunBatchesParallel(batches.size(), thread_count, [&](const int64_t index) {
+    batches[index].GetMatrix(matrix_type).prune(1.0, kPruneValueThreshold);
+  });
   const auto max_nonzeros = GetMaxNonZeros();
   const auto nonzeros = CountNonZeros(matrix_type);
   if (nonzeros <= max_nonzeros) {
-    return false;
+    return nonzeros != original_nonzeros;
   }
 
   // prepare for dropping

@@ -58,6 +58,9 @@ void CurrentStateManager::MultiplyBatches(
     const SparseMatrix& input_matrix = batch.GetMatrix(input_type);
     SparseMatrix& output_matrix = batch.GetMatrix(output_type);
     output_matrix = matrix * input_matrix;
+    if (!input_params.enable_dropping) {
+      output_matrix.prune(0.0);
+    }
     output_matrix.makeCompressed();
   });
 }
