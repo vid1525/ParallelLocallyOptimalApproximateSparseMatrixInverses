@@ -36,7 +36,7 @@ LomrProjection Sum(const std::vector<LomrProjection>& values) {
 std::tuple<double, double, bool> GetDeltaGamma(const std::vector<LomrProjection>& projections, const int64_t i) {
   const auto& p = Sum(projections);
   if (i == 1) {
-    if (!mc::IsFiniteNonZero(p.az_praz)) {
+    if (!mc::IsFiniteNonZero(p.az_praz, 0.0)) {
       return {-1, -1, true};
     }
     return {p.z_az / p.az_praz, 1.0, false};
@@ -63,6 +63,7 @@ mc::OutputResult RunLocallyOptimalMinimalResidual(const mc::InputParams& input_p
   }
 
   for (int64_t i = 1; i <= input_params.max_iterations; ++i) {
+    p.MultiplyBatches(p.apply_a, mc::MatrixType::P, mc::MatrixType::AP);
     p.MultiplyBatches(p.apply_a, mc::MatrixType::Z, mc::MatrixType::AZ);
     p.MultiplyBatches(p.apply_pr, mc::MatrixType::AZ, mc::MatrixType::Tmp);
     mc::RunBatchesParallel(p.batches.size(), p.thread_count, [&](const int64_t index) {
@@ -90,18 +91,21 @@ mc::OutputResult RunLocallyOptimalMinimalResidual(const mc::InputParams& input_p
 
     mc::RunBatchesParallel(p.batches.size(), p.thread_count, [&](const int64_t index) {
       auto& batch = p.batches[index];
-      mc::LinearCombination(batch.z, delta, batch.p, gamma);
-      mc::LinearCombination(batch.az, delta, batch.ap, gamma);
-    });
-    if (p.DropForMatrixType(mc::MatrixType::P)) {
-      p.MultiplyBatches(p.apply_a, mc::MatrixType::P, mc::MatrixType::AP);
-    }
-    mc::RunBatchesParallel(p.batches.size(), p.thread_count, [&](const int64_t index) {
-      mc::AddScaled(p.batches[index].m, p.batches[index].p, 1.0);
+      // update M with the old P after - store the normalized direction P_i = Z_i + (gamma / delta) P_{i-1}
+      mc::AddScaled(batch.m, batch.z, delta, false);
+      mc::AddScaled(batch.m, batch.p, gamma, false);
     });
     p.UpdateResidualsAfterDropping([&](mc::ColumnBatch& batch) {
-      mc::AddScaled(batch.r, batch.ap, -1.0);
+      mc::AddScaled(batch.r, batch.az, -delta, false);
+      mc::AddScaled(batch.r, batch.ap, -gamma, false);
+    }, false);
+    const double ratio = delta != 0.0 ? gamma / delta : 0.0;
+    mc::RunBatchesParallel(p.batches.size(), p.thread_count, [&](const int64_t index) {
+      auto& batch = p.batches[index];
+      // Restart the direction if normalization would be undefined.
+      mc::LinearCombination(batch.z, 1.0, batch.p, std::isfinite(ratio) ? ratio : 0.0, false);
     });
+    p.DropForMatrixType(mc::MatrixType::P);
 
     if (result.AppendIteration(input_params, p.batches, p.n, p.thread_count, mc::MatrixType::P)) {
       break;

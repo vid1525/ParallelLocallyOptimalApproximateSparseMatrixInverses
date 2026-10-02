@@ -81,7 +81,7 @@ struct CurrentStateManager {
   void CalculateResidualForBatch(ColumnBatch& batch);
 
   template <typename TCallback>
-  void UpdateResidualsAfterDropping(TCallback&& callback) {
+  void UpdateResidualsAfterDropping(TCallback&& callback, const bool stabilize = true) {
     if (input_params.enable_dropping) {
       ApplyDroppingStrategy();
       return;
@@ -89,7 +89,7 @@ struct CurrentStateManager {
     RunBatchesParallel(batches.size(), thread_count, [&](const int64_t batch_idx) {
       callback(batches[batch_idx]);
     });
-    StabilizeResiduals();
+    if (stabilize) { StabilizeResiduals(); }
   }
 
 private:
@@ -121,17 +121,17 @@ void RunBatchesParallel(const int64_t batches_count, const int64_t thread_count,
 
 double GetSafeQuotient(double numerator, double denominator);
 
-void LinearCombination(const SparseMatrix& x, const double a, SparseMatrix& y, const double b);
+void LinearCombination(const SparseMatrix& x, const double a, SparseMatrix& y, const double b, const bool prune = true);
 
 void MulScalarColumnwise(SparseMatrix& x, const std::vector<double>& a);
 
-void AddScaled(SparseMatrix& target, const SparseMatrix& direction, const double coefficient);
+void AddScaled(SparseMatrix& target, const SparseMatrix& direction, const double coefficient, const bool prune = true);
 
 double FrobeniusDot(const SparseMatrix& lhs, const SparseMatrix& rhs);
 
 Eigen::Vector2d SolveLeastSquares2x2(const Eigen::Matrix2d& matrix, const Eigen::Vector2d& x);
 
-bool IsFiniteNonZero(const double value);
+bool IsFiniteNonZero(const double value, const double threshold = kPruneValueThreshold);
 
 
 }  // namespace methods::common

@@ -37,7 +37,7 @@ mc::OutputResult RunConjugateGradient(const mc::InputParams& input_params, const
       rz_dot[index] = mc::FrobeniusDot(p.batches[index].p, p.batches[index].ap);
     });
     const double denominator = std::accumulate(rz_dot.begin(), rz_dot.end(), 0.0);
-    if (!mc::IsFiniteNonZero(r_z) || !mc::IsFiniteNonZero(denominator)) {
+    if (!mc::IsFiniteNonZero(r_z, 0.0) || !mc::IsFiniteNonZero(denominator, 0.0)) {
       break;
     }
 
@@ -49,11 +49,11 @@ mc::OutputResult RunConjugateGradient(const mc::InputParams& input_params, const
     const double previous_r_z = r_z;
 
     mc::RunBatchesParallel(p.batches.size(), p.thread_count, [&](const int64_t index) {
-      mc::AddScaled(p.batches[index].m, p.batches[index].p, alpha);
+      mc::AddScaled(p.batches[index].m, p.batches[index].p, alpha, false);
     });
     p.UpdateResidualsAfterDropping([&](mc::ColumnBatch& batch) {
-      mc::AddScaled(batch.r, batch.ap, -alpha);
-    });
+      mc::AddScaled(batch.r, batch.ap, -alpha, false);
+    }, false);
     if (result.AppendIteration(input_params, p.batches, p.n, p.thread_count, mc::MatrixType::P)) {
       break;
     }
@@ -72,7 +72,7 @@ mc::OutputResult RunConjugateGradient(const mc::InputParams& input_params, const
 
     mc::RunBatchesParallel(p.batches.size(), p.thread_count, [&](const int64_t index) {
       auto& batch = p.batches[index];
-      mc::LinearCombination(batch.z, 1.0, batch.p, beta);
+      mc::LinearCombination(batch.z, 1.0, batch.p, beta, false);
     });
     p.DropForMatrixType(mc::MatrixType::P);
     p.MultiplyBatches(p.apply_a, mc::MatrixType::P, mc::MatrixType::AP);

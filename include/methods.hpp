@@ -31,6 +31,7 @@ namespace common {
     SparseMatrix Pr;
 
     int64_t max_iterations = 100;
+    // Absolute Frobenius residual tolerance, with or without dropping.
     double tolerance = 1e-9;
     double max_density = 0.03;
     bool enable_dropping = true;

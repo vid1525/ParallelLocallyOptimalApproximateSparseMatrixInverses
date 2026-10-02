@@ -54,7 +54,7 @@ void CheckDensityStop(const std::string& name, const mc::OutputResult& result, c
   assert(!result.converged);
   assert(result.iterations > 0);
   assert(result.iterations < 8);
-  assert(density >= max_density - mc::EPS);
+  assert(density >= max_density);
   std::cout << "[ok]\n";
 }
 
@@ -120,16 +120,16 @@ int main() {
   CommonParallelizationTest("inner_outer_lomr", params, mio::RunLocallyOptimalMinimalResidual, initial_residual);
   std::cout << "-------------------------------" << std::endl;
 
-  // relative stopping criterion test
-  std::cout << "Relative stopping test:\n";
-  mc::InputParams relative_params = params;
-  relative_params.tolerance = 0.9;
-  const auto relative_result = mgs::RunMinimalResidual(relative_params, 2);
-  assert(relative_result.converged);
-  assert(relative_result.iterations == 1);
-  assert(relative_result.history.size() == 2);
-  assert(relative_result.history.back().residual_norm < relative_params.tolerance * initial_residual);
-  std::cout << "global_mr_relative iterations = " << relative_result.iterations << " [ok]\n";
+  // absolute stopping criterion test
+  std::cout << "Absolute stopping test:\n";
+  mc::InputParams absolute_params = params;
+  absolute_params.tolerance = 0.9 * initial_residual;
+  const auto absolute_result = mgs::RunMinimalResidual(absolute_params, 2);
+  assert(absolute_result.converged);
+  assert(absolute_result.iterations == 1);
+  assert(absolute_result.history.size() == 2);
+  assert(absolute_result.history.back().residual_norm < absolute_params.tolerance);
+  std::cout << "global_mr_absolute iterations = " << absolute_result.iterations << " [ok]\n";
 
   // dropping test
   std::cout << "Dropping test:\n";

@@ -35,7 +35,6 @@ mc::OutputResult RunMinimalResidual(const mc::InputParams& input_params, const i
   // calc Z_0
   std::vector<MrProjection> rz_dot(p.batches.size());
   p.MultiplyBatches(p.apply_pr, mc::MatrixType::R, mc::MatrixType::Z);
-  p.DropForMatrixType(mc::MatrixType::Z);
   if (result.AppendIteration(input_params, p.batches, p.n, p.thread_count, mc::MatrixType::Z)) {
     result.M = p.AssembleM();
     return result;
@@ -54,7 +53,7 @@ mc::OutputResult RunMinimalResidual(const mc::InputParams& input_params, const i
 
   MrProjection projection = Sum(rz_dot);
   for (int64_t i = 1; i <= input_params.max_iterations; ++i) {
-    if (!mc::IsFiniteNonZero(projection.denominator)) {
+    if (!mc::IsFiniteNonZero(projection.denominator, 0.0)) {
       break;
     }
     // alpha_i
@@ -65,18 +64,18 @@ mc::OutputResult RunMinimalResidual(const mc::InputParams& input_params, const i
 
     mc::RunBatchesParallel(p.batches.size(), p.thread_count, [&](const int64_t index) {
       auto& batch = p.batches[index];
-      mc::AddScaled(batch.m, batch.z, alpha);
+      mc::AddScaled(batch.m, batch.z, alpha, false);
     });
     p.UpdateResidualsAfterDropping([&](mc::ColumnBatch& batch) {
-      mc::AddScaled(batch.r, batch.az, -alpha);
-    });
+      // Match the authors' PMR implementation: monitor the true residual.
+      p.CalculateResidualForBatch(batch);
+    }, false);
 
     if (result.AppendIteration(input_params, p.batches, p.n, p.thread_count, mc::MatrixType::Z)) {
       break;
     }
 
     p.MultiplyBatches(p.apply_pr, mc::MatrixType::R, mc::MatrixType::Z);
-    p.DropForMatrixType(mc::MatrixType::Z);
     p.MultiplyBatches(p.apply_a, mc::MatrixType::Z, mc::MatrixType::AZ);
     p.MultiplyBatches(p.apply_pr, mc::MatrixType::AZ, mc::MatrixType::Tmp);
     mc::RunBatchesParallel(p.batches.size(), p.thread_count, [&](const int64_t index) {

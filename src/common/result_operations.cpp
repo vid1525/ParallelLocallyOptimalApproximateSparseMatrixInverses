@@ -5,11 +5,11 @@
 namespace methods::common {
 
 bool OutputResult::IsStopCriterionReached(const InputParams& input_params, const SingleIterationData& data) {
-  return !input_params.enable_dropping && data.density_m >= input_params.max_density - EPS;
+  return !input_params.enable_dropping && input_params.max_density < 1.0 && data.density_m >= input_params.max_density;
 }
 
 bool OutputResult::IsConverged(const InputParams& input_params, const SingleIterationData& data) {
-  return data.residual_norm < input_params.tolerance * initial_residual_norm;
+  return data.residual_norm < input_params.tolerance;
 }
 
 void OutputResult::AppendIterationData(
