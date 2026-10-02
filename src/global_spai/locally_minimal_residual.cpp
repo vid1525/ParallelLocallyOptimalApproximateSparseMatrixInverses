@@ -102,7 +102,7 @@ mc::OutputResult RunLocallyOptimalMinimalResidual(const mc::InputParams& input_p
     const double ratio = delta != 0.0 ? gamma / delta : 0.0;
     mc::RunBatchesParallel(p.batches.size(), p.thread_count, [&](const int64_t index) {
       auto& batch = p.batches[index];
-      // Restart the direction if normalization would be undefined.
+      // restart the direction if normalization would be undefined
       mc::LinearCombination(batch.z, 1.0, batch.p, std::isfinite(ratio) ? ratio : 0.0, false);
     });
     p.DropForMatrixType(mc::MatrixType::P);
