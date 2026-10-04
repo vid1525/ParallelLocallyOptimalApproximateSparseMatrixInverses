@@ -18,10 +18,20 @@ def main() -> None:
     parser.add_argument('--tolerance', type=float, default=1e-9)
     parser.add_argument('--max-density', type=float, default=1e-5)
     parser.add_argument('--write-preconditioners', action='store_true')
+    parser.add_argument('--backward-error', action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument('--max-backward-error-iterations', type=int, default=10)
+    parser.add_argument('--backward-error-seed', type=int, default=42)
+    parser.add_argument('--backward-error-realizations', type=int, default=1)
     dropping = parser.add_mutually_exclusive_group()
     dropping.add_argument('--disable-dropping', dest='enable_dropping', action='store_false', default=True)
     parser.add_argument('--num-threads', type=int, default=16)
     args = parser.parse_args()
+    if args.max_backward_error_iterations < 0:
+        parser.error('--max-backward-error-iterations must be nonnegative')
+    if args.backward_error_realizations <= 0:
+        parser.error('--backward-error-realizations must be positive')
+    if args.backward_error_seed < 0:
+        parser.error('--backward-error-seed must be nonnegative')
 
     common.update_output_folder(args)
 

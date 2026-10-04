@@ -146,9 +146,9 @@ namespace global_spai {
 
 namespace inner_outer {
 
-  common::OutputResult RunMinimalResidual(const common::InputParams& params, const int64_t num_threads = 1);
+  common::OutputResult RunMinimalResidual(const common::InputParams& params, const int64_t num_threads = 1, const int64_t inner_iterations = 2);
 
-  common::OutputResult RunLocallyOptimalMinimalResidual(const common::InputParams& params, const int64_t num_threads = 1);
+  common::OutputResult RunLocallyOptimalMinimalResidual(const common::InputParams& params, const int64_t num_threads = 1, const int64_t inner_iterations = 2);
 
 } // namespace methods::inner_outer
 

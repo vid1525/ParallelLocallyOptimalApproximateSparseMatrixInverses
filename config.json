@@ -4,6 +4,8 @@
             "name": "Section 5.1: Sample-matrix convergence with dropping",
             "description": "The ten benchmark matrices and iteration limits used in Section 5.1 of the thesis.",
             "script_type": "methods_convergence",
+            "backward_error": true,
+            "backward_error_realizations": 1,
             "num_threads": "max",
             "cases": [
                 {
@@ -92,6 +94,8 @@
             "name": "Section 5.1: Sample-matrix convergence without dropping",
             "description": "The ten benchmark matrices and iteration limits used in Section 5.1 of the thesis.",
             "script_type": "methods_convergence",
+            "backward_error": true,
+            "backward_error_realizations": 1,
             "num_threads": "max",
             "cases": [
                 {
@@ -177,9 +181,22 @@
             ]
         },
         {
+            "name": "Section 5.2: Fetch large matrices",
+            "description": "Download missing large datasets before running large-matrix convergence.",
+            "script_type": "fetch_large_spd_matrices",
+            "cases": [
+                {
+                    "name": "Fetch all configured large datasets",
+                    "enabled": true
+                }
+            ]
+        },
+        {
             "name": "Section 5.2: Large-matrix convergence",
             "description": "The five large structural matrices, with and without dropping, at 10 iterations and density 0.00005.",
             "script_type": "methods_large_convergence",
+            "backward_error": true,
+            "backward_error_realizations": 1,
             "num_threads": "max",
             "cases": [
                 {
@@ -266,8 +283,9 @@
         },
         {
             "name": "Section 5.3: Parallelization and speedup",
-            "description": "tri100eigs4k at 25 iterations, density 0.03, and 10 repetitions for each of 1, 2, 4, 8, 16, 32, 64, and 128 threads.",
+            "description": "tri100eigs4k at 25 iterations and bundle1 at 5 iterations, density 0.03, and 10 repetitions for each of 1, 2, 4, 8, 16, 32, 64, and 128 threads.",
             "script_type": "methods_thread_speedup",
+            "backward_error": false,
             "cases": [
                 {
                     "name": "tri100eigs4k with dropping",
@@ -279,10 +297,10 @@
                     "num_tries": 10
                 },
                 {
-                    "name": "tri100eigs4k without dropping",
+                    "name": "bundle1 without dropping",
                     "enabled": true,
-                    "dataset": "tri100eigs4k",
-                    "num_iterations": 25,
+                    "dataset": "bundle1",
+                    "num_iterations": 5,
                     "dropping": false,
                     "max_density": 0.03,
                     "num_tries": 10

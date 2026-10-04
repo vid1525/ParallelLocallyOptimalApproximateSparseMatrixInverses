@@ -21,6 +21,7 @@ cdef extern from "methods_c_api.h":
         int64_t num_threads
         int64_t use_initial_m
         int64_t use_preconditioner
+        int64_t inner_iterations
 
     ctypedef struct SingleIterationData:
         int64_t iteration
@@ -153,6 +154,7 @@ cdef object _call_method(
     double max_density,
     object enable_dropping,
     int64_t num_threads,
+    int64_t inner_iterations=2,
 ):
     cdef object A_csc = _as_csc(A)
     cdef object M0_csc = _as_csc(M0, A_csc.shape) if M0 is not None else _empty_csc()
@@ -169,6 +171,7 @@ cdef object _call_method(
     params.num_threads = num_threads
     params.use_initial_m = 1 if M0 is not None else 0
     params.use_preconditioner = 1 if Pr is not None else 0
+    params.inner_iterations = inner_iterations
 
     cdef Result result
     with nogil:
@@ -222,7 +225,7 @@ class GlobalSpaiMethods:
 class InnerOuterMethods:
     available_methods = ("mr", "lomr")
 
-    def mr(self, A, M0=None, Pr=None, max_iterations=100, tolerance=1e-9, max_density=0.03, enable_dropping=True, num_threads=1):
+    def mr(self, A, M0=None, Pr=None, max_iterations=100, tolerance=1e-9, max_density=0.03, enable_dropping=True, num_threads=1, inner_iterations=2):
         return _call_method(
             inner_outer_mr,
             A,
@@ -233,9 +236,10 @@ class InnerOuterMethods:
             max_density,
             enable_dropping,
             num_threads,
+            inner_iterations,
         )
 
-    def lomr(self, A, M0=None, Pr=None, max_iterations=100, tolerance=1e-9, max_density=0.03, enable_dropping=True, num_threads=1):
+    def lomr(self, A, M0=None, Pr=None, max_iterations=100, tolerance=1e-9, max_density=0.03, enable_dropping=True, num_threads=1, inner_iterations=2):
         return _call_method(
             inner_outer_lomr,
             A,
@@ -246,6 +250,7 @@ class InnerOuterMethods:
             max_density,
             enable_dropping,
             num_threads,
+            inner_iterations,
         )
 
 

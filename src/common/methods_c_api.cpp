@@ -142,11 +142,15 @@ Result spai_global_lomr(MatrixData A, MatrixData M0, MatrixData Pr, MethodParams
 }
 
 Result inner_outer_mr(MatrixData A, MatrixData M0, MatrixData Pr, MethodParams params) {
-  return RunMethod(A, M0, Pr, params, mio::RunMinimalResidual);
+  return RunMethod(A, M0, Pr, params, [&params](const mc::InputParams& input, const int64_t threads) {
+    return mio::RunMinimalResidual(input, threads, params.inner_iterations);
+  });
 }
 
 Result inner_outer_lomr(MatrixData A, MatrixData M0, MatrixData Pr, MethodParams params) {
-  return RunMethod(A, M0, Pr, params, mio::RunLocallyOptimalMinimalResidual);
+  return RunMethod(A, M0, Pr, params, [&params](const mc::InputParams& input, const int64_t threads) {
+    return mio::RunLocallyOptimalMinimalResidual(input, threads, params.inner_iterations);
+  });
 }
 
 void free_mem(Result* result) {

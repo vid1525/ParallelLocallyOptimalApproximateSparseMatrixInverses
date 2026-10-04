@@ -108,9 +108,14 @@ def _build_speedup_table_row(avg_timings: list[float], label) -> _SpeedupTableRo
 
 
 def _plot_charts(matrix_data: common.MatrixData, chart_name: str, figure_width: float, figure_height: float, averages_by_method: dict[str, float]):
+    styles = {
+        methods.get_method_label(family, name): methods.get_plot_style(family, name)
+        for family in methods.get_method_families(chart_name)
+        for name, _ in methods.generate_methods_by_family(family)
+    }
     plt.figure(figsize=(figure_width, figure_height))
     for label, averages in averages_by_method.items():
-        plt.plot(THREAD_COUNTS, averages, marker='o', linewidth=2, label=label)
+        plt.plot(THREAD_COUNTS, averages, linewidth=2, label=label, **styles[label])
 
     plt.xlabel('Number of threads')
     plt.ylabel('Average runtime (s)')

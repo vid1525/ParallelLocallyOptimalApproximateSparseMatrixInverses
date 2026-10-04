@@ -35,6 +35,9 @@ def extract_mtx(archive: Path, output_path: Path):
 def fetch_dataset(ds: common.MatrixData, output_dir: Path):
     archive_filename = output_dir / f'{ds.name}-{ds.group}.tar.gz'
     matrix_filename = common.large_dataset_matrix_path(ds, output_dir)
+    if matrix_filename.is_file() and matrix_filename.stat().st_size > 0:
+        tqdm.tqdm.write(f'Skipping {ds.name}: {matrix_filename} already exists.')
+        return
     download(ds.source_url, archive_filename)
     extract_mtx(archive_filename, matrix_filename)
     if archive_filename.exists():

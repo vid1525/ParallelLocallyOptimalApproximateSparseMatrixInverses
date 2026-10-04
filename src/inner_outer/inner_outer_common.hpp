@@ -10,9 +10,10 @@ namespace methods::inner_outer {
 
 namespace mc = methods::common;
 
-inline constexpr int64_t kInnerIterationsPerOuter = 2;
-
-inline mc::OutputResult Run(const mc::InputParams& params, const int64_t num_threads, const bool locally_optimal) {
+inline mc::OutputResult Run(const mc::InputParams& params, const int64_t num_threads, const bool locally_optimal, const int64_t inner_iterations) {
+  if (inner_iterations <= 0) {
+    throw std::invalid_argument("inner_iterations must be positive");
+  }
   auto [state, result] = mc::PrepareStateManager(
     params, num_threads, locally_optimal ? "inner_outer_lomr" : "inner_outer_mr", false
   );
@@ -34,7 +35,7 @@ inline mc::OutputResult Run(const mc::InputParams& params, const int64_t num_thr
       state.CalculateResidualForBatch(state.batches[index]);
       q[index].setZero();
     });
-    const auto inner_count = std::min(kInnerIterationsPerOuter, params.max_iterations - iteration);
+    const auto inner_count = std::min(inner_iterations, params.max_iterations - iteration);
     for (int64_t inner = 0; inner < inner_count; ++inner, ++iteration) {
       state.MultiplyBatches(outer_m, mc::MatrixType::R, mc::MatrixType::Z);
       state.MultiplyBatches(state.apply_a, mc::MatrixType::Z, mc::MatrixType::AZ);

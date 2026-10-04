@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 import os
 import shlex
@@ -19,12 +17,10 @@ CASE_OPTIONS = {
     "max_density": "--max-density",
     "num_tries": "--tries",
     "num_threads": "--num-threads",
+    "backward_error_realizations": "--backward-error-realizations",
 }
 
-# The experiment scripts normally write below ``/app/scripts``.  That is
-# appropriate for a writable source checkout, but an Apptainer SIF image is
-# read-only.  Keep all files produced by a full run in one caller-provided
-# directory when requested.
+
 RESULTS_SUBDIRECTORIES = {
     "methods_convergence": "results_sample",
     "methods_large_convergence": "results_large",
@@ -57,7 +53,7 @@ def build_command(
         raise FileNotFoundError(f"Scenario script does not exist: {script_path}")
 
     command = [sys.executable, str(script_path)]
-    supported_fields = {"name", "enabled", "dropping", *CASE_OPTIONS}
+    supported_fields = {"name", "enabled", "dropping", "backward_error", *CASE_OPTIONS}
     unsupported_fields = set(case).difference(supported_fields)
     if unsupported_fields:
         fields = ", ".join(sorted(unsupported_fields))
@@ -75,6 +71,15 @@ def build_command(
         raise ValueError('Case field "dropping" must be a boolean')
     if not dropping:
         command.append("--disable-dropping")
+
+    if "backward_error" in case:
+        backward_error = case["backward_error"]
+        if not isinstance(backward_error, bool):
+            raise ValueError('Case field "backward_error" must be a boolean')
+        if script_type in {"methods_convergence", "methods_large_convergence"}:
+            command.append("--backward-error" if backward_error else "--no-backward-error")
+        elif backward_error:
+            raise ValueError(f'{script_type} does not support backward-error calculation')
 
     if results_dir is not None:
         if script_type == "fetch_large_spd_matrices":
@@ -140,8 +145,9 @@ def main() -> None:
             if not enabled:
                 print(f"Skipping: {scenario_name} / {case_name} (disabled)", flush=True)
                 continue
-            if "num_threads" in scenario:
-                case_options.setdefault("num_threads", scenario["num_threads"])
+            for field in ("num_threads", "backward_error", "backward_error_realizations"):
+                if field in scenario:
+                    case_options.setdefault(field, scenario[field])
             command = build_command(
                 script_type,
                 case_options,

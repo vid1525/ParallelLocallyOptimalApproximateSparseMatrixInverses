@@ -68,5 +68,5 @@ python:
 
 clean:
 	rm -rf build
-	rm -f methods_cython/global_spai.cpp methods_cython/methods.cpp methods_cython/*.so methods_cython/*.pyd
+	rm -f methods_cython/global_spai.cpp methods_cython/methods.cpp methods_cython/backward_error.cpp methods_cython/*.so methods_cython/*.pyd
 	rm -f methods_common.o state_manager.o sparse_operations.o dropping.o result_operations.o methods_c_api.o conjugate_gradient.o minimal_residual.o locally_minimal_residual.o

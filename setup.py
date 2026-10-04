@@ -87,7 +87,15 @@ extensions = [
         language="c++",
         extra_compile_args=["-std=c++20", "-O3", "-pthread", *openmp_compile_args],
         extra_link_args=["-pthread", *openmp_link_args],
-    )
+    ),
+    Extension(
+        "methods_cython.backward_error",
+        sources=["methods_cython/backward_error.pyx"],
+        include_dirs=[*openmp_include_dirs],
+        language="c++",
+        extra_compile_args=["-O3", *openmp_compile_args],
+        extra_link_args=openmp_link_args,
+    ),
 ]
 
 

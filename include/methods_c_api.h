@@ -21,6 +21,7 @@ struct MethodParams {
   int64_t num_threads;
   int64_t use_initial_m;
   int64_t use_preconditioner;
+  int64_t inner_iterations;
 };
 
 struct SingleIterationData {

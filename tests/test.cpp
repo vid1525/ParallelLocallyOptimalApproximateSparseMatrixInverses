@@ -110,14 +110,20 @@ int main() {
   assert(A.isCompressed());
   mc::InputParams params(A, GetSparseIdentity(12), GetSparseIdentity(12), 8, 1e-14, 1.0);
   const auto initial_residual = GetResidualFrobeniusNorm(params.A, params.M0);
+  const auto inner_outer_mr = [](const mc::InputParams& input, const int64_t threads) {
+    return mio::RunMinimalResidual(input, threads);
+  };
+  const auto inner_outer_lomr = [](const mc::InputParams& input, const int64_t threads) {
+    return mio::RunLocallyOptimalMinimalResidual(input, threads);
+  };
 
   // parallelization test
   std::cout << "Parallelization test:\n";
   CommonParallelizationTest("global_cg", params, mgs::RunConjugateGradient, initial_residual);
   CommonParallelizationTest("global_mr", params, mgs::RunMinimalResidual, initial_residual);
   CommonParallelizationTest("global_lomr", params, mgs::RunLocallyOptimalMinimalResidual, initial_residual);
-  CommonParallelizationTest("inner_outer_mr", params, mio::RunMinimalResidual, initial_residual);
-  CommonParallelizationTest("inner_outer_lomr", params, mio::RunLocallyOptimalMinimalResidual, initial_residual);
+  CommonParallelizationTest("inner_outer_mr", params, inner_outer_mr, initial_residual);
+  CommonParallelizationTest("inner_outer_lomr", params, inner_outer_lomr, initial_residual);
   std::cout << "-------------------------------" << std::endl;
 
   // absolute stopping criterion test
@@ -140,8 +146,8 @@ int main() {
   DroppingParallelizationTest("global_cg_drop", sparse_params, mgs::RunConjugateGradient);
   DroppingParallelizationTest("global_mr_drop", sparse_params, mgs::RunMinimalResidual);
   DroppingParallelizationTest("global_lomr_drop", sparse_params, mgs::RunLocallyOptimalMinimalResidual);
-  DroppingParallelizationTest("inner_outer_mr_drop", sparse_params, mio::RunMinimalResidual);
-  DroppingParallelizationTest("inner_outer_lomr_drop", sparse_params, mio::RunLocallyOptimalMinimalResidual);
+  DroppingParallelizationTest("inner_outer_mr_drop", sparse_params, inner_outer_mr);
+  DroppingParallelizationTest("inner_outer_lomr_drop", sparse_params, inner_outer_lomr);
   std::cout << "-------------------------------" << std::endl;
 
   // no dropping test
