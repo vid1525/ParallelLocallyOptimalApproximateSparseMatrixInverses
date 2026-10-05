@@ -39,7 +39,7 @@ METHOD_FAMILIES = {
 
 
 def get_method_label(family: dict[str, object], method_name: str) -> str:
-    display_name = ('PCG' if family[FIELD_OUTPUT_SLUG] == METHOD_FAMILY_GLOBAL_SPAI
+    display_name = ('CG' if family[FIELD_OUTPUT_SLUG] == METHOD_FAMILY_GLOBAL_SPAI
                     and method_name == 'cg' else method_name.upper())
     return f'{family[FIELD_TITLE]} {display_name}'
 
