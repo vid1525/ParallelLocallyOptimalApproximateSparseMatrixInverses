@@ -283,7 +283,7 @@
         },
         {
             "name": "Section 5.3: Parallelization and speedup",
-            "description": "tri100eigs4k at 25 iterations and bundle1 at 5 iterations, density 0.03, and 10 repetitions for each of 1, 2, 4, 8, 16, 32, 64, and 128 threads.",
+            "description": "tri100eigs4k at 25 iterations and bundle1 at 5 iterations, density 0.03, and 10 repetitions for each of 1, 2, 4, 8, 16, 32, and 64 threads.",
             "script_type": "methods_thread_speedup",
             "backward_error": false,
             "cases": [
