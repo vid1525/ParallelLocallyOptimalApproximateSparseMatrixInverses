@@ -120,7 +120,7 @@
                     "dataset": "msc04515",
                     "num_iterations": 5000,
                     "dropping": false,
-                    "max_density": 1.0
+                    "max_density": 0.03
                 },
                 {
                     "name": "bundle1, 500 iterations",

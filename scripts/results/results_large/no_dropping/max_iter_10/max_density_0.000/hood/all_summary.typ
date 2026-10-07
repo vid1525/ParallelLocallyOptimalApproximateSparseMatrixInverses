@@ -1,6 +1,6 @@
 #table(columns: 6,
   align: (center, center, center, center, center, center),
-  table.header([Method], [$n$], [$cal(n n z)$], [\#iter], [$||I_n - A M||_F$], [$cal(n n z) \/ n^2$]),
+  table.header([Method], [$n$], [$cal(n n z)$], [\#iter], [$||R||_F$ (reported)], [$cal(n n z) \/ n^2$]),
   [Global CG],
   [$220542$],
   [$9895422$],

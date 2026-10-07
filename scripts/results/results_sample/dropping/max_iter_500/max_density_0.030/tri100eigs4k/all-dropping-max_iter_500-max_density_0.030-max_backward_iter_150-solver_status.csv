@@ -1,0 +1,8 @@
+method,realization,solver,active_threads,history_limit,solver_updates,final_relative_residual,converged,status
+Global CG,1,PCG,256,150,21,5.853600849815598e-07,True,converged
+Global MR,1,PCG,256,150,149,0.09004587223512428,False,iteration limit reached
+Global LOMR,1,PCG,256,150,3,6.885808219811848e-08,True,converged
+Inner-outer - 2 inner iter MR,1,PCG,256,150,1,8.861825584942246e-12,True,converged
+Inner-outer - 2 inner iter LOMR,1,PCG,256,150,1,8.429689380143123e-12,True,converged
+Inner-outer - 5 inner iter MR,1,PCG,256,150,1,1.5797621666872376e-11,True,converged
+Inner-outer - 5 inner iter LOMR,1,PCG,256,150,1,5.352147995925601e-12,True,converged
