@@ -12,7 +12,7 @@ bool IsFiniteNonZero(const double value, const double threshold) {
 }
 
 double GetSafeQuotient(const double numerator, const double denominator) {
-  if (!IsFiniteNonZero(denominator)) {
+  if (!IsFiniteNonZero(denominator, 0.0)) {
     return 0.0;
   }
   const auto quotient = numerator / denominator;
@@ -22,7 +22,7 @@ double GetSafeQuotient(const double numerator, const double denominator) {
 void LinearCombination(const SparseMatrix& x, const double a, SparseMatrix& y, const double b, const bool prune) {
   y *= b;
   y += a * x;
-  y.prune(1.0, prune ? kPruneValueThreshold : 0.0);
+  y.prune(prune ? y.norm() : 0.0, prune ? kPruneValueThreshold : 0.0);
 }
 
 void MulScalarColumnwise(SparseMatrix& x, const std::vector<double>& a) {
@@ -35,17 +35,17 @@ void MulScalarColumnwise(SparseMatrix& x, const std::vector<double>& a) {
       entry.valueRef() *= a[i];
     }
   }
-  x.prune(1.0, kPruneValueThreshold);
+  x.prune(0.0);
 }
 
 void AddScaled(SparseMatrix& target, const SparseMatrix& direction, const double coefficient, const bool prune) {
   if (target.rows() != direction.rows() || target.cols() != direction.cols()) {
     throw std::invalid_argument("Sparse matrices must have the same shape");
   }
-  if (prune ? std::fabs(coefficient) > kPruneValueThreshold : coefficient != 0.0) {
+  if (coefficient != 0.0) {
     target += coefficient * direction;
   }
-  target.prune(1.0, prune ? kPruneValueThreshold : 0.0);
+  target.prune(prune ? target.norm() : 0.0, prune ? kPruneValueThreshold : 0.0);
 }
 
 double FrobeniusDot(const SparseMatrix& x, const SparseMatrix& y) {
@@ -59,7 +59,13 @@ Eigen::Vector2d SolveLeastSquares2x2(const Eigen::Matrix2d& matrix, const Eigen:
   if (!matrix.allFinite() || !x.allFinite()) {
     return Eigen::Vector2d::Zero();
   }
-  Eigen::Vector2d solution = matrix.completeOrthogonalDecomposition().solve(x);
+  const Eigen::Vector2d scaling = matrix.diagonal().cwiseAbs().cwiseSqrt().unaryExpr(
+    [](const double value) { return value > 0.0 ? 1.0 / value : 1.0; }
+  );
+  const Eigen::Matrix2d scaled_matrix = scaling.asDiagonal() * matrix * scaling.asDiagonal();
+  Eigen::Vector2d solution = scaling.asDiagonal() * scaled_matrix.completeOrthogonalDecomposition().solve(
+    scaling.asDiagonal() * x
+  );
   if (!solution.allFinite()) {
     solution.setZero();
   }

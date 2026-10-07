@@ -104,7 +104,7 @@
                     "dataset": "bcsstk21",
                     "num_iterations": 1000,
                     "dropping": false,
-                    "max_density": 0.03
+                    "max_density": 1.0
                 },
                 {
                     "name": "tri100eigs4k, 500 iterations",
@@ -112,7 +112,7 @@
                     "dataset": "tri100eigs4k",
                     "num_iterations": 500,
                     "dropping": false,
-                    "max_density": 0.03
+                    "max_density": 1.0
                 },
                 {
                     "name": "msc04515, 5000 iterations",
@@ -120,7 +120,7 @@
                     "dataset": "msc04515",
                     "num_iterations": 5000,
                     "dropping": false,
-                    "max_density": 0.03
+                    "max_density": 1.0
                 },
                 {
                     "name": "bundle1, 500 iterations",

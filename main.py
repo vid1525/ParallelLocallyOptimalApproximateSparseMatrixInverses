@@ -18,6 +18,7 @@ CASE_OPTIONS = {
     "num_tries": "--tries",
     "num_threads": "--num-threads",
     "backward_error_realizations": "--backward-error-realizations",
+    "max_backward_error_iterations": "--max-backward-error-iterations",
 }
 
 

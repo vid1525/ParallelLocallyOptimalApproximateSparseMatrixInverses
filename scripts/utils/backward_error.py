@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 from scipy import sparse
 from scipy.io import mmread
-from methods_cython.backward_error import pcg, parallel_threads
+from methods_cython.backward_error import matvec, pcg, parallel_threads
 
 
 DEFAULT_MAX_ITERATIONS = 50
@@ -14,20 +14,24 @@ DEFAULT_REALIZATIONS = 20
 TOLERANCE = 1e-6
 
 
-def random_rhs(n: int, seed: int = 42) -> np.ndarray:
-    return next(random_rhs_realizations(n, seed=seed, realizations=1))
+def random_rhs(A: sparse.spmatrix, seed: int = 1, num_threads: int = 1) -> np.ndarray:
+    return next(random_rhs_realizations(A, seed=seed, realizations=1, num_threads=num_threads))
 
 
-def random_rhs_realizations(n: int, seed: int = 42, realizations: int = DEFAULT_REALIZATIONS):
-    if n <= 0:
-        raise ValueError('The system must be nonempty')
+def random_rhs_realizations(A: sparse.spmatrix, seed: int = 1, realizations: int = DEFAULT_REALIZATIONS, num_threads: int = 1):
+    A = _prepare_matrix(A)
+    n = A.shape[0]
+    if n <= 0 or A.shape[1] != n or A.nnz == 0:
+        raise ValueError('A must be a nonempty, nonzero square matrix')
+    if num_threads <= 0:
+        raise ValueError('num_threads must be positive')
     if realizations <= 0:
         raise ValueError('realizations must be positive')
     rng = np.random.default_rng(seed)
     for _ in range(realizations):
-        b = rng.random(n)
+        b = matvec(A.data, A.indices, A.indptr, rng.random(n), min(num_threads, n))
         while np.linalg.norm(b) == 0:
-            b = rng.random(n)
+            b = matvec(A.data, A.indices, A.indptr, rng.random(n), min(num_threads, n))
         yield b
 
 
@@ -36,6 +40,7 @@ class BackwardErrorResult:
     history: np.ndarray
     converged: bool
     status: str
+    solver: str = 'PCG'
 
 
 def _prepare_matrix(matrix: sparse.spmatrix) -> sparse.csr_matrix:
@@ -72,22 +77,20 @@ class PreparedPCGSolver:
         self.system = system
         self.M = _prepare_matrix(M)
 
-    def calculate(self, max_iterations: int = DEFAULT_MAX_ITERATIONS,
-                  *, b: np.ndarray | None = None) -> BackwardErrorResult:
+    def calculate(self, max_iterations: int = DEFAULT_MAX_ITERATIONS, *, b: np.ndarray | None = None) -> BackwardErrorResult:
         if max_iterations < 0:
             raise ValueError('max_iterations must be nonnegative')
         A, M = self.system.A, self.M
-        b = random_rhs(A.shape[0]) if b is None else np.ascontiguousarray(b, dtype=np.float64)
+        b = (random_rhs(A, num_threads=self.system.num_threads) if b is None else np.ascontiguousarray(b, dtype=np.float64))
         b_norm = np.linalg.norm(b)
         if b.shape != (A.shape[0],) or not np.isfinite(b_norm) or b_norm <= 0:
             raise ValueError('b must be a finite vector with ||b|| > 0')
-        history, status = pcg(
-            A.data, A.indices, A.indptr, M.data, M.indices, M.indptr, b,
-            max_iterations or A.shape[0], self.system.num_threads, TOLERANCE)
+        limit = max_iterations or A.shape[0]
+        history, status = pcg(A.data, A.indices, A.indptr, M.data, M.indices, M.indptr, b, limit, self.system.num_threads, TOLERANCE)
         statuses = {
             0: 'iteration limit reached',
             1: 'converged',
-            2: 'PCG breakdown (invalid recurrence denominator)',
+            2: 'PCG breakdown (zero or nonfinite recurrence scalar)',
             3: 'PCG breakdown (nonfinite residual)',
         }
         return BackwardErrorResult(history, status == 1, statuses[status])
@@ -107,8 +110,6 @@ def calculate_backward_error(
 
 def load_preconditioner(matrix_path: Path) -> sparse.csr_matrix:
     M = sparse.csr_matrix(mmread(matrix_path), dtype=np.float64)
-    M = M + M.T
-    M.data *= 0.5
     return M
 
 

@@ -30,16 +30,14 @@ cdef void _multiply(
     double[::1] out, int threads,
 ) noexcept nogil:
     cdef Py_ssize_t row
-    for row in prange(out.shape[0], num_threads=threads, schedule='static',
-                      use_threads_if=out.shape[0] >= 8192):
+    for row in prange(out.shape[0], num_threads=threads, schedule='static', use_threads_if=threads > 1):
         out[row] = _row_dot(values, indices, offsets, x, row)
 
 
 cdef double _dot(const double[::1] x, const double[::1] y, int threads) noexcept nogil:
     cdef Py_ssize_t i
     cdef double total = 0.0
-    for i in prange(x.shape[0], num_threads=threads, schedule='static',
-                    use_threads_if=x.shape[0] >= 8192):
+    for i in prange(x.shape[0], num_threads=threads, schedule='static', use_threads_if=threads > 1):
         total += x[i] * y[i]
     return total
 
@@ -50,9 +48,22 @@ def parallel_threads(Py_ssize_t n, int requested):
     cdef int count = 1
     cdef Py_ssize_t i
     cdef int threads = min(n, requested)
-    for i in prange(1, nogil=True, num_threads=threads, use_threads_if=n >= 8192):
+    for i in prange(1, nogil=True, num_threads=threads, use_threads_if=threads > 1):
         count = omp_get_num_threads()
     return count
+
+
+def matvec(
+    const double[::1] values, const index_t[::1] indices,
+    const index_t[::1] offsets, const double[::1] x, int threads,
+):
+    if threads <= 0 or offsets.shape[0] != x.shape[0] + 1:
+        raise ValueError('Invalid matrix-vector dimensions or thread count')
+    cdef object result = np.empty(x.shape[0], dtype=np.float64)
+    cdef double[::1] out = result
+    with nogil:
+        _multiply(values, indices, offsets, x, out, threads)
+    return result
 
 
 def pcg(
@@ -67,18 +78,20 @@ def pcg(
     cdef double[::1] z = np.empty(n, dtype=np.float64)
     cdef double[::1] p = np.empty(n, dtype=np.float64)
     cdef double[::1] Ap = np.empty(n, dtype=np.float64)
+    cdef double[::1] x = np.zeros(n, dtype=np.float64)
     cdef object history_array = np.empty(max_iterations, dtype=np.float64)
     cdef double[::1] history = history_array
     cdef Py_ssize_t i, count = 1
     cdef double b_norm, r_z, denominator, alpha, beta, error, r_r
     cdef int status = 0
+    cdef bint refreshed
     threads = min(threads, n)
 
     with nogil:
-        for i in prange(n, num_threads=threads, schedule='static', use_threads_if=n >= 8192):
+        for i in prange(n, num_threads=threads, schedule='static', use_threads_if=threads > 1):
             r[i] = b[i]
         _multiply(m_values, m_indices, m_offsets, r, z, threads)
-        for i in prange(n, num_threads=threads, schedule='static', use_threads_if=n >= 8192):
+        for i in prange(n, num_threads=threads, schedule='static', use_threads_if=threads > 1):
             p[i] = z[i]
         r_r = _dot(r, r, threads)
         b_norm = sqrt(r_r)
@@ -87,25 +100,45 @@ def pcg(
         while count < max_iterations and history[count - 1] > tolerance:
             _multiply(a_values, a_indices, a_offsets, p, Ap, threads)
             denominator = _dot(p, Ap, threads)
-            if not isfinite(r_z) or not isfinite(denominator) or r_z == 0 or denominator == 0:
+            if not isfinite(r_z) or not isfinite(denominator) or r_z == 0.0 or denominator == 0.0:
                 status = 2
                 break
             alpha = r_z / denominator
-            beta = 1.0 / r_z
-            for i in prange(n, num_threads=threads, schedule='static', use_threads_if=n >= 8192):
+            if not isfinite(alpha):
+                status = 2
+                break
+            beta = r_z
+            for i in prange(n, num_threads=threads, schedule='static', use_threads_if=threads > 1):
+                x[i] += alpha * p[i]
                 r[i] -= alpha * Ap[i]
             r_r = _dot(r, r, threads)
+            error = sqrt(r_r) / b_norm
+            refreshed = error <= tolerance
+            if refreshed:
+                _multiply(a_values, a_indices, a_offsets, x, Ap, threads)
+                for i in prange(n, num_threads=threads, schedule='static', use_threads_if=threads > 1):
+                    r[i] = b[i] - Ap[i]
+                r_r = _dot(r, r, threads)
+                error = sqrt(r_r) / b_norm
             _multiply(m_values, m_indices, m_offsets, r, z, threads)
             r_z = _dot(r, z, threads)
-            beta = beta * r_z
-            for i in prange(n, num_threads=threads, schedule='static', use_threads_if=n >= 8192):
-                p[i] = z[i] + beta * p[i]
-            error = sqrt(r_r) / b_norm
+            beta = 0.0 if refreshed else r_z / beta
             history[count] = error
             count += 1
             if not isfinite(error):
                 status = 3
                 break
-        if isfinite(history[count - 1]) and history[count - 1] <= tolerance:
+            if not isfinite(beta):
+                status = 2
+                break
+            for i in prange(n, num_threads=threads, schedule='static', use_threads_if=threads > 1):
+                p[i] = z[i] + beta * p[i]
+        _multiply(a_values, a_indices, a_offsets, x, Ap, threads)
+        for i in prange(n, num_threads=threads, schedule='static', use_threads_if=threads > 1):
+            r[i] = b[i] - Ap[i]
+        history[count - 1] = sqrt(_dot(r, r, threads)) / b_norm
+        if not isfinite(history[count - 1]):
+            status = 3
+        elif history[count - 1] <= tolerance:
             status = 1
     return history_array[:count].copy(), status

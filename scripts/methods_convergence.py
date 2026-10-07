@@ -19,7 +19,7 @@ def main() -> None:
     parser.add_argument('--write-preconditioners', action='store_true')
     parser.add_argument('--backward-error', action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument('--max-backward-error-iterations', type=int, default=150)
-    parser.add_argument('--backward-error-seed', type=int, default=42)
+    parser.add_argument('--backward-error-seed', type=int, default=1)
     parser.add_argument('--backward-error-realizations', type=int, default=1)
     dropping = parser.add_mutually_exclusive_group()
     dropping.add_argument('--disable-dropping', dest='enable_dropping', action='store_false', default=True)

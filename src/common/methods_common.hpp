@@ -121,11 +121,11 @@ void RunBatchesParallel(const int64_t batches_count, const int64_t thread_count,
 
 double GetSafeQuotient(double numerator, double denominator);
 
-void LinearCombination(const SparseMatrix& x, const double a, SparseMatrix& y, const double b, const bool prune = true);
+void LinearCombination(const SparseMatrix& x, const double a, SparseMatrix& y, const double b, const bool prune = false);
 
 void MulScalarColumnwise(SparseMatrix& x, const std::vector<double>& a);
 
-void AddScaled(SparseMatrix& target, const SparseMatrix& direction, const double coefficient, const bool prune = true);
+void AddScaled(SparseMatrix& target, const SparseMatrix& direction, const double coefficient, const bool prune = false);
 
 double FrobeniusDot(const SparseMatrix& lhs, const SparseMatrix& rhs);
 

@@ -52,7 +52,7 @@ SparseMatrix GetDiagonalInversePreconditioner(const SparseMatrix& A) {
     throw std::invalid_argument("Matrix A must be square to build a diagonal preconditioner");
   }
   const Eigen::VectorXd diagonal = A.diagonal();
-  if (!diagonal.allFinite() || (diagonal.array() < std::numeric_limits<double>::epsilon()).any()) {
+  if (!diagonal.allFinite() || (diagonal.array() <= 0.0).any()) {
     throw std::invalid_argument("A has an invalid diagonal entry; provide Pr explicitly");
   }
   const Eigen::VectorXd inverse = diagonal.cwiseInverse();
@@ -89,20 +89,15 @@ std::vector<ColumnBatch> InitializeBatches(
     batches.emplace_back(n, first_col, last_col - first_col);
   }
 
-  const auto has_inital_preconditioner = (input_params.M0.size() != 0);
+  const auto has_initial_preconditioner = (input_params.M0.size() != 0);
+  SparseMatrix default_m(n, n);
+  if (!has_initial_preconditioner) {
+    default_m.setIdentity();
+  }
+  const SparseMatrix& initial_m = has_initial_preconditioner ? input_params.M0 : default_m;
   RunBatchesParallel(batch_count, thread_count, [&](const int64_t batch_idx) {
     auto& batch = batches[batch_idx]; 
-    if (has_inital_preconditioner) {
-      batch.m = input_params.M0.innerVectors(batch.first_column, batch.Width());
-      return;
-    }
-
-    batch.m.reserve(batch.Width());
-    for (int64_t i = 0; i < batch.Width(); ++i) {
-      batch.m.startVec(i);
-      batch.m.insertBack(batch.first_column + i, i) = 1.0;
-    }
-    batch.m.finalize();
+    batch.m = initial_m.innerVectors(batch.first_column, batch.Width());
   });
   return batches;
 }

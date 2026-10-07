@@ -8,6 +8,7 @@ import json
 import numpy as np
 from scipy import sparse
 from scipy.io import mmread, mmwrite
+from scipy.sparse.linalg import norm
 import sys
 import typing
 from pathlib import Path
@@ -81,11 +82,14 @@ def run_methods(matrix_data: MatrixData, args: argparse.Namespace) -> None:
     print(f'{matrix_data.name}: preconditioner construction limit = {args.max_iterations}')
     convergence_table = typst.TypstTable(_get_convergence_table_row_columns())
     residual_histories = []
+    construction_evaluations = []
     saved_preconditioners = []
-    # Isolate temporary matrices from retained results of previous runs.
-    storage = (TemporaryDirectory(prefix='backward-error-', dir=matrix_data.dataset_dir)
-               if args.backward_error and not args.write_preconditioners
-               else nullcontext(matrix_data.dataset_dir))
+
+    storage = (
+        TemporaryDirectory(prefix='backward-error-', dir=matrix_data.dataset_dir)
+        if args.backward_error and not args.write_preconditioners
+        else nullcontext(matrix_data.dataset_dir)
+    )
 
     with storage as storage_dir:
         try:
@@ -102,6 +106,7 @@ def run_methods(matrix_data: MatrixData, args: argparse.Namespace) -> None:
                             residual_histories=residual_histories,
                             preconditioner_dir=Path(storage_dir),
                             saved_preconditioners=saved_preconditioners,
+                            construction_evaluations=construction_evaluations,
                         )
                     )
 
@@ -113,24 +118,32 @@ def run_methods(matrix_data: MatrixData, args: argparse.Namespace) -> None:
                 args=args,
                 figure=residual_figure,
                 axis=residual_axis,
-                y_label=r'Residual norm, $||R_i||_F$',
+                y_label=r'Reported residual norm, $||R_i||_F$',
                 filename_suffix='convergence',
             )
             _dump_iteration_tables(
                 matrix_data.dataset_dir, chart_name, args, 'convergence', residual_histories)
             convergence_table.dump(matrix_data.dataset_dir / f'{chart_name}_summary.typ')
+            construction_path = matrix_data.dataset_dir / (
+                f'{chart_name}-{_get_datastring_in_filename(args)}-construction_status.csv')
+            with construction_path.open('w', newline='', encoding='utf-8') as csv_file:
+                writer = csv.DictWriter(csv_file, fieldnames=list(construction_evaluations[0]))
+                writer.writeheader()
+                writer.writerows(construction_evaluations)
         finally:
             plt.close(residual_figure)
 
         if not args.backward_error:
             return
 
-        print(f'{matrix_data.name}: backward-error history limit = {args.max_backward_error_iterations} '
+        history_limit = args.max_backward_error_iterations or matrix_data.n
+        print(f'{matrix_data.name}: backward-error history limit = {history_limit} '
               '(includes initial residual)')
         backward_error_figure, backward_error_axis = plt.subplots(
             figsize=(args.figure_width, args.figure_height)
         )
         backward_error_histories = [[] for _ in range(args.backward_error_realizations)]
+        evaluations = []
         try:
             system = backward_error.PreparedPCGSystem(matrix_data.A, num_threads=args.num_threads)
             for label, style, path in saved_preconditioners:
@@ -138,15 +151,29 @@ def run_methods(matrix_data: MatrixData, args: argparse.Namespace) -> None:
                 solver = system.prepare_preconditioner(M)
                 failures = []
                 rhs = backward_error.random_rhs_realizations(
-                    matrix_data.n, seed=args.backward_error_seed,
-                    realizations=args.backward_error_realizations)
+                    system.A, seed=args.backward_error_seed, realizations=args.backward_error_realizations, num_threads=system.num_threads
+                )
                 for realization, b in enumerate(rhs):
                     evaluation = solver.calculate(args.max_backward_error_iterations, b=b)
+                    evaluations.append({
+                        'method': label,
+                        'realization': realization + 1,
+                        'solver': evaluation.solver,
+                        'active_threads': system.active_threads,
+                        'history_limit': history_limit,
+                        'solver_updates': evaluation.history.size - 1,
+                        'final_relative_residual': evaluation.history[-1],
+                        'converged': evaluation.converged,
+                        'status': evaluation.status,
+                    })
                     if not evaluation.converged:
                         failures.append(f'{realization + 1}: {evaluation.status}')
                     backward_error_histories[realization].append((label, evaluation.history))
-                    _plot_backward_error_history(
-                        backward_error_axis, evaluation.history, label, style, realization)
+                    _plot_backward_error_history(backward_error_axis, evaluation.history, label, style, realization)
+                if failures:
+                    print(f'{label}: backward-error evaluation failed: {"; ".join(failures)}')
+                else:
+                    print(f'{label}: backward-error evaluation converged')
                 del solver, M
             _plot_chart(
                 ds_name=matrix_data.name,
@@ -159,9 +186,13 @@ def run_methods(matrix_data: MatrixData, args: argparse.Namespace) -> None:
                 filename_suffix='backward_error',
             )
             for realization, histories in enumerate(backward_error_histories, start=1):
-                suffix = ('backward_error' if realization == 1
-                          else f'backward_error_realization_{realization:02d}')
+                suffix = 'backward_error' if realization == 1 else f'backward_error_realization_{realization:02d}'
                 _dump_iteration_tables(matrix_data.dataset_dir, chart_name, args, suffix, histories)
+            status_path = matrix_data.dataset_dir / f'{chart_name}-{_get_datastring_in_filename(args, "backward_error")}-solver_status.csv'
+            with status_path.open('w', newline='', encoding='utf-8') as csv_file:
+                writer = csv.DictWriter(csv_file, fieldnames=list(evaluations[0]))
+                writer.writeheader()
+                writer.writerows(evaluations)
         finally:
             plt.close(backward_error_figure)
 
@@ -204,6 +235,7 @@ def _run_single_method(
     residual_histories: list[tuple[str, np.ndarray]],
     preconditioner_dir: Path,
     saved_preconditioners: list[tuple[str, dict[str, str], Path]],
+    construction_evaluations: list[dict[str, object]],
 ) -> _ConvergenceTableRow:
     result = method(
         matrix_data.A,
@@ -215,8 +247,19 @@ def _run_single_method(
         enable_dropping=args.enable_dropping,
         num_threads=args.num_threads,
     )
-
     label = methods.get_method_label(family, method_name)
+    actual_residual = norm(sparse.eye(matrix_data.n, format='csc') - matrix_data.A @ result.M)
+    construction_evaluations.append({
+        'method': label,
+        'requested_threads': args.num_threads,
+        'iterations': result.iterations,
+        'reported_residual_norm': result.history[-1]['residual_norm'],
+        'actual_residual_norm': actual_residual,
+        'construction_backward_error': actual_residual / (
+            norm(matrix_data.A) * norm(result.M) + np.sqrt(matrix_data.n)),
+        'density': result.M.nnz / matrix_data.n ** 2,
+        'converged': actual_residual < args.tolerance,
+    })
     result_folder = methods.get_preconditioner_result_folder(family, method_name)
     style = methods.get_plot_style(family, method_name)
     iterations = result.history['iteration']
@@ -239,6 +282,14 @@ def _run_single_method(
     residual_histories.append((label, result.history['residual_norm']))
     print(f'{label}: completed {result.iterations} preconditioner iterations '
           f'(limit {args.max_iterations})')
+    if result.converged and actual_residual >= args.tolerance:
+        print(f'{label}: construction did not converge (true residual above tolerance)')
+    elif not result.converged:
+        stop_reason = ('density limit reached' if not args.enable_dropping
+                       and result.history[-1]['density_m'] >= args.max_density
+                       else 'iteration limit reached' if result.iterations == args.max_iterations
+                       else 'recurrence breakdown')
+        print(f'{label}: construction did not converge ({stop_reason})')
     return _ConvergenceTableRow(
         method=label,
         n=matrix_data.n,
@@ -331,7 +382,7 @@ class MatrixData:
         self.n = self.A.shape[0]
         self.nnz = self.A.nnz
         self.Pr = MatrixData._get_diagonal_inverse_preconditioner(self.A)
-        self.M0 = sparse.eye(self.A.shape[0], format='csc', dtype=np.float64)
+        self.M0 = sparse.eye(self.n, format='csc')
 
     @staticmethod
     def _load_sample_matrix(dataset_dir: Path, filename: str) -> sparse.csc_matrix:
@@ -353,8 +404,8 @@ class MatrixData:
     @staticmethod
     def _get_diagonal_inverse_preconditioner(A: sparse.spmatrix) -> sparse.csc_matrix:
         diag = A.diagonal()
-        if np.any(abs(diag) < EPS):
-            raise ValueError('A has a zero diagonal entry.')
+        if not np.isfinite(diag).all() or np.any(diag <= 0.0):
+            raise ValueError('A must have a finite positive diagonal.')
         return sparse.diags(1.0 / diag, format='csc')
 
 
@@ -376,8 +427,7 @@ def _plot_chart(
     y_label: str,
     filename_suffix: str,
 ) -> Path:
-    iteration_label = ('PCG iteration, $i$' if filename_suffix.startswith('backward_error')
-                       else 'Iteration, $i$')
+    iteration_label = 'PCG iteration, $i$' if filename_suffix.startswith('backward_error') else 'Iteration, $i$'
     axis.set_xlabel(iteration_label, fontsize=DEFAULT_FONT_SIZE)
     axis.set_ylabel(y_label, labelpad=5, fontsize=DEFAULT_FONT_SIZE)
     axis.set_title(ds_name, fontsize=DEFAULT_FONT_SIZE)
@@ -458,7 +508,7 @@ def _get_convergence_table_row_columns() -> list[tuple[str, str]]:
         # ('lambda_min', '$lambda_min$'),
         # ('lambda_max', '$lambda_max$'),
         ('last_iteration', '\\#iter'),
-        ('residual_norm', '$||I_n - A M||_F$'),
+        ('residual_norm', '$||R||_F$ (reported)'),
         ('density', '$cal(n n z) \\/ n^2$'),
     ]
 

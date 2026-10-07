@@ -3,6 +3,7 @@
 #include "methods_common.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <vector>
 
@@ -23,10 +24,10 @@ inline mc::OutputResult Run(const mc::InputParams& params, const int64_t num_thr
   }
 
   std::vector<mc::SparseMatrix> q;
-  std::vector<std::vector<double>> ratios;
+  std::vector<std::vector<double>> normalizations;
   for (const auto& batch : state.batches) {
     q.emplace_back(state.n, batch.Width());
-    ratios.emplace_back(batch.Width(), 0.0);
+    normalizations.emplace_back(batch.Width(), 1.0);
   }
 
   for (int64_t iteration = 0; iteration < params.max_iterations;) {
@@ -63,31 +64,38 @@ inline mc::OutputResult Run(const mc::InputParams& params, const int64_t num_thr
             delta[col] = coefficients[0];
             gamma[col] = coefficients[1];
           }
-          ratios[index][col] = mc::GetSafeQuotient(gamma[col], delta[col]);
+          const double inverse_delta = delta[col] != 0.0 ? 1.0 / delta[col] : 1.0;
+          normalizations[index][col] = std::isfinite(inverse_delta) ? inverse_delta : 1.0;
         }
         batch.p = batch.z;
         mc::MulScalarColumnwise(batch.p, delta);
         if (locally_optimal) {
-          auto previous_q = q[index];
-          mc::MulScalarColumnwise(previous_q, gamma);
-          mc::AddScaled(batch.p, previous_q, 1.0);
+          mc::MulScalarColumnwise(q[index], gamma);
+          mc::AddScaled(batch.p, q[index], 1.0);
         }
       });
 
-      state.DropForMatrixType(mc::MatrixType::P);
+      const bool direction_dropped = state.DropForMatrixType(mc::MatrixType::P);
       state.MultiplyBatches(state.apply_a, mc::MatrixType::P, mc::MatrixType::AP);
       mc::RunBatchesParallel(state.batches.size(), state.thread_count, [&](const int64_t index) {
-        mc::AddScaled(state.batches[index].m, state.batches[index].p, 1.0);
+        auto& batch = state.batches[index];
+        if (direction_dropped) {
+          std::vector<double> corrections(batch.Width());
+          for (int64_t col = 0; col < batch.Width(); ++col) {
+            corrections[col] = mc::GetSafeQuotient(batch.r.col(col).dot(batch.ap.col(col)), batch.ap.col(col).squaredNorm());
+          }
+          mc::MulScalarColumnwise(batch.p, corrections);
+          mc::MulScalarColumnwise(batch.ap, corrections);
+        }
+        mc::AddScaled(batch.m, batch.p, 1.0);
+        if (locally_optimal) {
+          q[index] = batch.p;
+          mc::MulScalarColumnwise(q[index], normalizations[index]);
+        }
       });
       state.UpdateResidualsAfterDropping([](mc::ColumnBatch& batch) {
         mc::AddScaled(batch.r, batch.ap, -1.0);
       });
-      if (locally_optimal) {
-        mc::RunBatchesParallel(state.batches.size(), state.thread_count, [&](const int64_t index) {
-          mc::MulScalarColumnwise(q[index], ratios[index]);
-          mc::AddScaled(q[index], state.batches[index].r, 1.0);
-        });
-      }
       if (result.AppendIteration(params, state.batches, state.n, state.thread_count, mc::MatrixType::P)) {
         result.M = state.AssembleM();
         return result;

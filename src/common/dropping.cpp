@@ -123,9 +123,13 @@ void CurrentStateManager::ApplyDroppingStrategy() {
   EnsureSymmetry();
   RunBatchesParallel(batches.size(), thread_count, [&](const int64_t index) {
     auto& batch = batches[index];
+    std::vector<double> thresholds(batch.Width());
+    for (int64_t col = 0; col < batch.Width(); ++col) {
+      thresholds[col] = kPruneValueThreshold * batch.m.col(col).norm();
+    }
     // protects diagonal entries from both dropping stages
     batch.m.prune([&](const int64_t row, const int64_t col, const double value) {
-      return value != 0.0 && (row == batch.first_column + col || std::abs(value) >= kPruneValueThreshold);
+      return value != 0.0 && (row == batch.first_column + col || std::abs(value) >= thresholds[col]);
     });
     CalculateResidualForBatch(batch);
   });
@@ -176,7 +180,8 @@ bool CurrentStateManager::DropForMatrixType(const MatrixType matrix_type) {
   }
   const auto original_nonzeros = CountNonZeros(matrix_type);
   RunBatchesParallel(batches.size(), thread_count, [&](const int64_t index) {
-    batches[index].GetMatrix(matrix_type).prune(1.0, kPruneValueThreshold);
+    auto& matrix = batches[index].GetMatrix(matrix_type);
+    matrix.prune(matrix.norm(), kPruneValueThreshold);
   });
   const auto max_nonzeros = GetMaxNonZeros();
   const auto nonzeros = CountNonZeros(matrix_type);
