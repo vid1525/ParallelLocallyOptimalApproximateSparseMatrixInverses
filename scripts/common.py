@@ -118,7 +118,7 @@ def run_methods(matrix_data: MatrixData, args: argparse.Namespace) -> None:
                 args=args,
                 figure=residual_figure,
                 axis=residual_axis,
-                y_label=r'Reported residual norm, $||R_i||_F$',
+                y_label=r'Residual norm, $||R_i||_F$',
                 filename_suffix='convergence',
             )
             _dump_iteration_tables(
